@@ -73,12 +73,13 @@ Fiesta::Fiesta() {
     while (WaitForLine(buf, ln, 2000)) {
         std::cout << ln << "\n";
     }
-    //
+    // Unrelated notes ->
     // ABS:
     // 8V51-2C405-AE
     // E-A426G
+    // <- Unrelated notes
     std::cout << "Security request:\n";
-    uint64_t mixkey = 429137;
+    uint64_t mixkey = 1305500;
     while (true) {
         serialInterface->Write("27 01\r"); // Extended session
         if (WaitForLine(buf, ln, 2000)) {
@@ -117,19 +118,24 @@ Fiesta::Fiesta() {
                 serialInterface->Write(lnw);
                 if (WaitForLine(buf, ln, 2000)) {
                     std::cout << ln << "\n";
-                    if (ln.size() > 1) {
+                    if (!ln.empty()) {
+                        std::cout << "Hit!: " << seed << " -> " << key << "\n";
                         break;
                     }
                 }
                 ++mixkey;
             }
+        } else {
+            break;
         }
     }
+    /*
     std::cout << "Injector test:\n";
     serialInterface->Write("31 01 01 44\r");
     while (WaitForLine(buf, ln, 60000)) {
         std::cout << ln << "\n";
     }
+     */
 }
 
 constexpr char tohexch(int ch) {
