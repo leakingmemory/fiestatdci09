@@ -32,20 +32,70 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
+constexpr uint32_t SeedKeyPass1(uint32_t seed, uint32_t keyMostSignificantDW)
+{
+    auto v0 = ((seed & 0xFF0000) >> 16) | (seed & 0xFF00) | (keyMostSignificantDW) | ((seed & 0xFF) << 16);
+    auto state = 0xc541a9;
+    for (int i = 0; i < 32; i++) {
+        auto bit = ((v0 >> i) & 1 ^ state & 1) << 23;
+        auto v2 = bit | (state >> 1);
+        state = v2 & 0xEF6FD7 | ((((v2 & 0x100000) >> 20) ^ ((v2 & 0x800000) >> 23)) << 20) | (((((state >> 1) & 0x8000) >> 15) ^ ((v2 & 0x800000) >> 23)) << 15) | (((((state >> 1) & 0x1000) >> 12) ^ ((v2 & 0x800000) >> 23)) << 12) | 32 * ((((state >> 1) & 0x20) >> 5) ^ ((v2 & 0x800000) >> 23)) | 8 * ((((state >> 1) & 8) >> 3) ^ ((v2 & 0x800000) >> 23));
+    }
+    return state;
+}
+constexpr uint32_t SeedKeyCompletionPass2(uint32_t state, uint32_t keyLeastSignificant24Bit)
+{
+    for (int i = 0; i < 32; i++) {
+        auto bit = (((((keyLeastSignificant24Bit & 0xFF) << 24) | ((keyLeastSignificant24Bit & 0xFF00) << 8) | ((keyLeastSignificant24Bit >> 24) & 0xff) | (((keyLeastSignificant24Bit >> 16) & 0xff) << 8)) >> i) & 1 ^ state & 1) << 23;
+        auto v3 = bit | (state >> 1);
+        state = v3 & 0xEF6FD7 | ((((v3 & 0x100000) >> 20) ^ ((v3 & 0x800000) >> 23)) << 20) | (((((state >> 1) & 0x8000) >> 15) ^ ((v3 & 0x800000) >> 23)) << 15) | (((((state >> 1) & 0x1000) >> 12) ^ ((v3 & 0x800000) >> 23)) << 12) | 32 * ((((state >> 1) & 0x20) >> 5) ^ ((v3 & 0x800000) >> 23)) | 8 * ((((state >> 1) & 8) >> 3) ^ ((v3 & 0x800000) >> 23));
+    }
+    return ((state & 0xF0000) >> 16) | 16 * (state & 0xF) | ((((state & 0xF00000) >> 20) | ((state & 0xF000) >> 8)) << 8) | ((state & 0xFF0) >> 4 << 16);
+}
+constexpr uint32_t SeedKeyPass2(uint32_t state, uint32_t keyLeastSignificantDW)
+{
+    for (int i = 0; i < 8; i++) {
+        auto bit = ((((keyLeastSignificantDW >> 24) & 0xff) >> i) & 1 ^ state & 1) << 23;
+        auto v3 = bit | (state >> 1);
+        state = v3 & 0xEF6FD7 | ((((v3 & 0x100000) >> 20) ^ ((v3 & 0x800000) >> 23)) << 20) | (((((state >> 1) & 0x8000) >> 15) ^ ((v3 & 0x800000) >> 23)) << 15) | (((((state >> 1) & 0x1000) >> 12) ^ ((v3 & 0x800000) >> 23)) << 12) | 32 * ((((state >> 1) & 0x20) >> 5) ^ ((v3 & 0x800000) >> 23)) | 8 * ((((state >> 1) & 8) >> 3) ^ ((v3 & 0x800000) >> 23));
+    }
+    return state;
+}
+constexpr uint32_t SeedKeyPass3(uint32_t state, uint32_t keyLeastSignificant24Bit) {
+    uint32_t bitConstant = (((keyLeastSignificant24Bit & 0xFF) << 24) | ((keyLeastSignificant24Bit & 0xFF00) << 8) | (((keyLeastSignificant24Bit >> 16) & 0xff) << 8));
+    for (int i = 8; i < 32; i++) {
+        auto bit = (((((keyLeastSignificant24Bit & 0xFF) << 24) | ((keyLeastSignificant24Bit & 0xFF00) << 8) | ((keyLeastSignificant24Bit >> 24) & 0xff) | (((keyLeastSignificant24Bit >> 16) & 0xff) << 8)) >> i) & 1 ^ state & 1) << 23;
+        //auto bit = ((bitConstant >> i) & 1 ^ state & 1) << 23;
+        auto v3 = bit | (state >> 1);
+        state = v3 & 0xEF6FD7 | ((((v3 & 0x100000) >> 20) ^ ((v3 & 0x800000) >> 23)) << 20) | (((((state >> 1) & 0x8000) >> 15) ^ ((v3 & 0x800000) >> 23)) << 15) | (((((state >> 1) & 0x1000) >> 12) ^ ((v3 & 0x800000) >> 23)) << 12) | 32 * ((((state >> 1) & 0x20) >> 5) ^ ((v3 & 0x800000) >> 23)) | 8 * ((((state >> 1) & 8) >> 3) ^ ((v3 & 0x800000) >> 23));
+    }
+    return ((state & 0xF0000) >> 16) | ((state & 0xF) << 4) | ((state & 0xF00000) >> 12) | (state & 0xF000) | ((state & 0xFF0) << 12);
+}
+#if 0
+constexpr uint32_t ReverseSeedKeyPass3(uint32_t result, uint32_t keyLeastSignificant24Bit) {
+    uint32_t state = ((result & 0xF) << 16) | ((result & 0xF0) >> 8) | ((result & 0xF00) << 12) | (result & 0xF000) | ((result & 0xFF0000) >> 12);
+    uint32_t bitConstant = (((keyLeastSignificant24Bit & 0xFF) << 24) | ((keyLeastSignificant24Bit & 0xFF00) << 8) | (((keyLeastSignificant24Bit >> 16) & 0xff) << 8));
+    for (int i = 31; i >= 8; i--) {
+        state = state & 0xEF6FD7;
+        auto bit = ((bitConstant >> i) & 1 ^ state & 1) << 23;
+        auto v3 = bit | (state >> 1);
+        // Bit 3
+        // Bit 5
+        // Bit 12
+        // Bit 15
+        // Bit 20
+        auto xorbit = (v3 & 0x800000) >> 23;
+        state = v3 & 0xEF6FD7 | ((((v3 & 0x100000) >> 20) ^ ((v3 & 0x800000) >> 23)) << 20) | (((((state >> 1) & 0x8000) >> 15) ^ ((v3 & 0x800000) >> 23)) << 15) | (((((state >> 1) & 0x1000) >> 12) ^ ((v3 & 0x800000) >> 23)) << 12) | 32 * ((((state >> 1) & 0x20) >> 5) ^ ((v3 & 0x800000) >> 23)) | 8 * ((((state >> 1) & 8) >> 3) ^ ((v3 & 0x800000) >> 23));
+    }
+}
+#endif
+
 constexpr uint32_t  SeedKey(uint32_t seed, uint64_t key) {
-    auto v0 = ((seed & 0xFF0000) >> 16) | (seed & 0xFF00) | ((uint32_t) (key >> 32)) | ((seed & 0xFF) << 16);
-    auto v1 = 0xc541a9;
-    for (int i = 0; i < 32; i++) {
-        auto bit = ((v0 >> i) & 1 ^ v1 & 1) << 23;
-        auto v2 = bit | (v1 >> 1);
-        v1 = v2 & 0xEF6FD7 | ((((v2 & 0x100000) >> 20) ^ ((v2 & 0x800000) >> 23)) << 20) | (((((v1 >> 1) & 0x8000) >> 15) ^ ((v2 & 0x800000) >> 23)) << 15) | (((((v1 >> 1) & 0x1000) >> 12) ^ ((v2 & 0x800000) >> 23)) << 12) | 32 * ((((v1 >> 1) & 0x20) >> 5) ^ ((v2 & 0x800000) >> 23)) | 8 * ((((v1 >> 1) & 8) >> 3) ^ ((v2 & 0x800000) >> 23));
-    }
-    for (int i = 0; i < 32; i++) {
-        auto bit = (((((key & 0xFF) << 24) | ((key & 0xFF00) << 8) | ((key >> 24) & 0xff) | (((key >> 16) & 0xff) << 8)) >> i) & 1 ^ v1 & 1) << 23;
-        auto v3 = bit | (v1 >> 1);
-        v1 = v3 & 0xEF6FD7 | ((((v3 & 0x100000) >> 20) ^ ((v3 & 0x800000) >> 23)) << 20) | (((((v1 >> 1) & 0x8000) >> 15) ^ ((v3 & 0x800000) >> 23)) << 15) | (((((v1 >> 1) & 0x1000) >> 12) ^ ((v3 & 0x800000) >> 23)) << 12) | 32 * ((((v1 >> 1) & 0x20) >> 5) ^ ((v3 & 0x800000) >> 23)) | 8 * ((((v1 >> 1) & 8) >> 3) ^ ((v3 & 0x800000) >> 23));
-    }
-    return ((v1 & 0xF0000) >> 16) | 16 * (v1 & 0xF) | ((((v1 & 0xF00000) >> 20) | ((v1 & 0xF000) >> 8)) << 8) | ((v1 & 0xFF0) >> 4 << 16);
+    uint32_t keyMostSignificant = (uint32_t) (key >> 32);
+    uint32_t keyLeastSignificant = (uint32_t) (key & 0xFFFFFFFF);
+    auto state = SeedKeyPass1(seed, keyMostSignificant);
+    state = SeedKeyPass2(state, keyLeastSignificant);
+    return SeedKeyPass3(state, keyLeastSignificant);
 }
 
 static_assert(SeedKey(0x400CAB, 13877892) == 0x585AB6);
