@@ -35,19 +35,47 @@ int main() {
         for (int i = 0; i < 256; i++) {
             pass1Table[i] = SeedKeyPass1(sequence[i], i >> 8);
         }
-        uint32_t pass2Table[65536];
-        for (int i = 0; i < 65536; i++) {
-            pass2Table[i] = SeedKeyPass2(pass1Table[i >> 8], ((uint32_t) (i & 0xFF)) << 24);
-        }
-        for (uint64_t keyLow = 0; keyLow < 0x1000000; keyLow++) {
-            for (int keyHigh = 0; keyHigh < 65536; keyHigh++) {
-                auto v = SeedKeyPass3(pass2Table[keyHigh], (uint32_t) keyLow);
-                if (v == sequence[i + 1]) {
-                    uint64_t key = keyHigh;
-                    key = key << 24;
-                    key |= keyLow;
-                    std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
-                    foundKeys.emplace_back(key);
+        for (uint64_t keyHigh = 0; keyHigh < 65536; keyHigh++) {
+            auto pass2 = SeedKeyPass2(pass1Table[keyHigh >> 8], ((uint32_t) (keyHigh & 0xFF)) << 24);
+            for (int keyMiddle = 0; keyMiddle < 256; keyMiddle++) {
+                auto pass3a = SeedKeyPass3a(pass2, ((uint32_t) keyMiddle) << 16);
+                for (int keyLow = 0; keyLow < 65536; keyLow += 4) {
+                    auto v = SeedKeyPass3bx4(pass3a, (uint32_t) keyLow);
+                    if (v.key1 == sequence[i + 1]) {
+                        uint64_t key = keyHigh;
+                        key = key << 24;
+                        key |= keyMiddle << 16;
+                        key |= keyLow;
+                        std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
+                        foundKeys.emplace_back(key);
+                    }
+                    if (v.key2 == sequence[i + 1]) {
+                        uint64_t key = keyHigh;
+                        key = key << 24;
+                        key |= keyMiddle << 16;
+                        key |= keyLow;
+                        key += 1;
+                        std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
+                        foundKeys.emplace_back(key);
+                    }
+                    if (v.key3 == sequence[i + 1]) {
+                        uint64_t key = keyHigh;
+                        key = key << 24;
+                        key |= keyMiddle << 16;
+                        key |= keyLow;
+                        key += 2;
+                        std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
+                        foundKeys.emplace_back(key);
+                    }
+                    if (v.key4 == sequence[i + 1]) {
+                        uint64_t key = keyHigh;
+                        key = key << 24;
+                        key |= keyMiddle << 16;
+                        key |= keyLow;
+                        key += 3;
+                        std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
+                        foundKeys.emplace_back(key);
+                    }
                 }
             }
         }
