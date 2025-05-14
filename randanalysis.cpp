@@ -31,222 +31,134 @@ int main() {
             0xED155D
     };
     std::vector<uint64_t> keys{};
-    for (decltype(sequence.size()) i = 0; i < (sequence.size() > 0 ? (sequence.size() - 1) : 0); i++) {
-        std::cout << "Iteration " << i << "\n";
+    if (sequence.size() > 0) {
+        std::cout << "Iteration 0\n";
         std::mutex mtx{};
         std::vector<uint64_t> foundKeys{};
         std::vector<std::function<void ()>> tasks{};
         for (uint16_t keyHighH = 0; keyHighH < 256; keyHighH++) {
-            auto pass1 = SeedKeyPass1(sequence[i], (uint64_t) keyHighH);
+            auto pass1 = SeedKeyPass1(sequence[0], (uint64_t) keyHighH);
             for (uint16_t keyHighL = 0; keyHighL < 256; keyHighL++) {
-                tasks.emplace_back([pass1, keyHighH, keyHighL, &sequence, i, &foundKeys, &mtx]() {
+                tasks.emplace_back([pass1, keyHighH, keyHighL, &sequence, &foundKeys, &mtx]() {
                     auto pass2 = SeedKeyPass2(pass1, ((uint32_t) keyHighL) << 24);
                     for (int keyMiddle = 0; keyMiddle < 256; keyMiddle++) {
                         auto pass3a = SeedKeyPass3a(pass2, ((uint32_t) keyMiddle) << 16);
                         for (int keyLow = 0; keyLow < 65536; keyLow += 16) {
                             auto v = SeedKeyPass3bx16(pass3a, (uint32_t) keyLow);
-                            if (v.value1 == sequence[i + 1]) {
-                                uint16_t keyHigh = keyHighH;
-                                keyHigh = keyHigh << 8;
-                                keyHigh |= keyHighL;
-                                uint64_t key = keyHigh;
-                                key = key << 24;
-                                key |= keyMiddle << 16;
-                                key |= keyLow;
+                            uint16_t keyHigh = keyHighH;
+                            keyHigh = keyHigh << 8;
+                            keyHigh |= keyHighL;
+                            uint64_t key_ = keyHigh;
+                            key_ = key_ << 24;
+                            key_ |= keyMiddle << 16;
+                            key_ |= keyLow;
+                            v = SeedKeyX16(v, key_);
+                            if (v.value1 == sequence[1]) {
+                                auto key = key_;
                                 std::lock_guard lock{mtx};
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.value2 == sequence[i + 1]) {
-                                uint16_t keyHigh = keyHighH;
-                                keyHigh = keyHigh << 8;
-                                keyHigh |= keyHighL;
-                                uint64_t key = keyHigh;
-                                key = key << 24;
-                                key |= keyMiddle << 16;
-                                key |= keyLow;
+                            if (v.value2 == sequence[1]) {
+                                auto key = key_;
                                 key += 1;
                                 std::lock_guard lock{mtx};
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.value3 == sequence[i + 1]) {
-                                uint16_t keyHigh = keyHighH;
-                                keyHigh = keyHigh << 8;
-                                keyHigh |= keyHighL;
-                                uint64_t key = keyHigh;
-                                key = key << 24;
-                                key |= keyMiddle << 16;
-                                key |= keyLow;
+                            if (v.value3 == sequence[1]) {
+                                auto key = key_;
                                 key += 2;
                                 std::lock_guard lock{mtx};
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.value4 == sequence[i + 1]) {
-                                uint16_t keyHigh = keyHighH;
-                                keyHigh = keyHigh << 8;
-                                keyHigh |= keyHighL;
-                                uint64_t key = keyHigh;
-                                key = key << 24;
-                                key |= keyMiddle << 16;
-                                key |= keyLow;
+                            if (v.value4 == sequence[1]) {
+                                auto key = key_;
                                 key += 3;
                                 std::lock_guard lock{mtx};
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.value5 == sequence[i + 1]) {
-                                uint16_t keyHigh = keyHighH;
-                                keyHigh = keyHigh << 8;
-                                keyHigh |= keyHighL;
-                                uint64_t key = keyHigh;
-                                key = key << 24;
-                                key |= keyMiddle << 16;
-                                key |= keyLow;
+                            if (v.value5 == sequence[1]) {
+                                auto key = key_;
                                 key += 4;
                                 std::lock_guard lock{mtx};
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.value6 == sequence[i + 1]) {
-                                uint16_t keyHigh = keyHighH;
-                                keyHigh = keyHigh << 8;
-                                keyHigh |= keyHighL;
-                                uint64_t key = keyHigh;
-                                key = key << 24;
-                                key |= keyMiddle << 16;
-                                key |= keyLow;
+                            if (v.value6 == sequence[1]) {
+                                auto key = key_;
                                 key += 5;
                                 std::lock_guard lock{mtx};
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.value7 == sequence[i + 1]) {
-                                uint16_t keyHigh = keyHighH;
-                                keyHigh = keyHigh << 8;
-                                keyHigh |= keyHighL;
-                                uint64_t key = keyHigh;
-                                key = key << 24;
-                                key |= keyMiddle << 16;
-                                key |= keyLow;
+                            if (v.value7 == sequence[1]) {
+                                auto key = key_;
                                 key += 6;
                                 std::lock_guard lock{mtx};
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.value8 == sequence[i + 1]) {
-                                uint16_t keyHigh = keyHighH;
-                                keyHigh = keyHigh << 8;
-                                keyHigh |= keyHighL;
-                                uint64_t key = keyHigh;
-                                key = key << 24;
-                                key |= keyMiddle << 16;
-                                key |= keyLow;
+                            if (v.value8 == sequence[1]) {
+                                auto key = key_;
                                 key += 7;
                                 std::lock_guard lock{mtx};
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.value9 == sequence[i + 1]) {
-                                uint16_t keyHigh = keyHighH;
-                                keyHigh = keyHigh << 8;
-                                keyHigh |= keyHighL;
-                                uint64_t key = keyHigh;
-                                key = key << 24;
-                                key |= keyMiddle << 16;
-                                key |= keyLow;
+                            if (v.value9 == sequence[1]) {
+                                auto key = key_;
                                 key += 8;
                                 std::lock_guard lock{mtx};
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.value10 == sequence[i + 1]) {
-                                uint16_t keyHigh = keyHighH;
-                                keyHigh = keyHigh << 8;
-                                keyHigh |= keyHighL;
-                                uint64_t key = keyHigh;
-                                key = key << 24;
-                                key |= keyMiddle << 16;
-                                key |= keyLow;
+                            if (v.value10 == sequence[1]) {
+                                auto key = key_;
                                 key += 9;
                                 std::lock_guard lock{mtx};
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.value11 == sequence[i + 1]) {
-                                uint16_t keyHigh = keyHighH;
-                                keyHigh = keyHigh << 8;
-                                keyHigh |= keyHighL;
-                                uint64_t key = keyHigh;
-                                key = key << 24;
-                                key |= keyMiddle << 16;
-                                key |= keyLow;
+                            if (v.value11 == sequence[1]) {
+                                auto key = key_;
                                 key += 10;
                                 std::lock_guard lock{mtx};
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.value12 == sequence[i + 1]) {
-                                uint16_t keyHigh = keyHighH;
-                                keyHigh = keyHigh << 8;
-                                keyHigh |= keyHighL;
-                                uint64_t key = keyHigh;
-                                key = key << 24;
-                                key |= keyMiddle << 16;
-                                key |= keyLow;
+                            if (v.value12 == sequence[1]) {
+                                auto key = key_;
                                 key += 11;
                                 std::lock_guard lock{mtx};
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.value13 == sequence[i + 1]) {
-                                uint16_t keyHigh = keyHighH;
-                                keyHigh = keyHigh << 8;
-                                keyHigh |= keyHighL;
-                                uint64_t key = keyHigh;
-                                key = key << 24;
-                                key |= keyMiddle << 16;
-                                key |= keyLow;
+                            if (v.value13 == sequence[1]) {
+                                auto key = key_;
                                 key += 12;
                                 std::lock_guard lock{mtx};
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.value14 == sequence[i + 1]) {
-                                uint16_t keyHigh = keyHighH;
-                                keyHigh = keyHigh << 8;
-                                keyHigh |= keyHighL;
-                                uint64_t key = keyHigh;
-                                key = key << 24;
-                                key |= keyMiddle << 16;
-                                key |= keyLow;
+                            if (v.value14 == sequence[1]) {
+                                auto key = key_;
                                 key += 13;
                                 std::lock_guard lock{mtx};
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.value15 == sequence[i + 1]) {
-                                uint16_t keyHigh = keyHighH;
-                                keyHigh = keyHigh << 8;
-                                keyHigh |= keyHighL;
-                                uint64_t key = keyHigh;
-                                key = key << 24;
-                                key |= keyMiddle << 16;
-                                key |= keyLow;
+                            if (v.value15 == sequence[1]) {
+                                auto key = key_;
                                 key += 14;
                                 std::lock_guard lock{mtx};
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.value16 == sequence[i + 1]) {
-                                uint16_t keyHigh = keyHighH;
-                                keyHigh = keyHigh << 8;
-                                keyHigh |= keyHighL;
-                                uint64_t key = keyHigh;
-                                key = key << 24;
-                                key |= keyMiddle << 16;
-                                key |= keyLow;
+                            if (v.value16 == sequence[1]) {
+                                auto key = key_;
                                 key += 15;
                                 std::lock_guard lock{mtx};
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
@@ -278,26 +190,22 @@ int main() {
         for (auto &thread : threads) {
             thread.join();
         }
-        if (i == 0) {
-            keys = foundKeys;
-            continue;
-        }
-        std::cout << "Keys remaining:\n";
+        keys = foundKeys;
+    }
+    for (int i = 1; i < (sequence.size() - 1); i++) {
         auto iterator = keys.begin();
         while (iterator != keys.end()) {
-            bool found{false};
-            for (auto iterationKey : foundKeys) {
-                if (*iterator == iterationKey) {
-                    std::cout << "0x" << std::hex << iterationKey << std::dec << "\n";
-                    found = true;
-                    break;
-                }
-            }
-            if (found) {
+            auto key = *iterator;
+            auto state = SeedKey(sequence[i], key);
+            if (SeedKey(state, key) == sequence[i + 1]) {
+                std::cout << "Key works: 0x" << std::hex << key << std::dec << std::endl;
                 ++iterator;
             } else {
                 iterator = keys.erase(iterator);
             }
         }
+    }
+    for (auto key : keys) {
+        std::cout << "Passed: " << std::hex << key << std::dec << std::endl;
     }
 }

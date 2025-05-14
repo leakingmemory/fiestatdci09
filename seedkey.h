@@ -574,6 +574,47 @@ constexpr uint32_t  SeedKey(uint32_t seed, uint64_t key) {
     return SeedKeyPass3b(state, keyLeastSignificant);
 }
 
+constexpr ValueX2 SeedKeyX2Pass1To3a(ValueX2 seed, uint64_t key) {
+    uint32_t keyMostSignificant = (uint32_t) (key >> 32);
+    uint32_t keyLeastSignificant = (uint32_t) (key & 0xFFFFFFFF);
+    ValueX2 state{};
+    state.value1 = SeedKeyPass1(seed.value1, keyMostSignificant);
+    state.value2 = SeedKeyPass1(seed.value2, keyLeastSignificant != 0xFFFFFFFF ? keyMostSignificant : keyMostSignificant + 1);
+    state.value1 = SeedKeyPass2(state.value1, keyLeastSignificant);
+    state.value2 = SeedKeyPass2(state.value2, keyLeastSignificant + 1);
+    state.value1 = SeedKeyPass3a(state.value1, keyLeastSignificant);
+    state.value2 = SeedKeyPass3a(state.value2, keyLeastSignificant + 1);
+    return state;
+}
+
+constexpr ValueX2 SeedKeyX2(ValueX2 seed, uint64_t key) {
+    auto state = SeedKeyX2Pass1To3a(seed, key);
+    state.value1 = SeedKeyPass3b(state.value1, (uint32_t) (key & 0xFFFFFFFF));
+    state.value2 = SeedKeyPass3b(state.value2, (uint32_t) ((key + 1) & 0xFFFFFFFF));
+    return state;
+}
+
+constexpr ValueX4 SeedKeyX4Pass1To3a(ValueX4 seed, uint64_t key) {
+    return {SeedKeyX2Pass1To3a(seed.First(), key), SeedKeyX2Pass1To3a(seed.Second(), key + 2)};
+}
+
+constexpr ValueX4 SeedKeyX4(ValueX4 seed, uint64_t key) {
+    auto state = SeedKeyX4Pass1To3a(seed, key);
+    state.value1 = SeedKeyPass3b(state.value1, (uint32_t) (key & 0xFFFFFFFF));
+    state.value2 = SeedKeyPass3b(state.value2, (uint32_t) ((key + 1) & 0xFFFFFFFF));
+    state.value3 = SeedKeyPass3b(state.value3, (uint32_t) ((key + 2) & 0xFFFFFFFF));
+    state.value4 = SeedKeyPass3b(state.value4, (uint32_t) ((key + 3) & 0xFFFFFFFF));
+    return state;
+}
+
+constexpr ValueX8 SeedKeyX8(ValueX8 seed, uint64_t key) {
+    return {SeedKeyX4(seed.First(), key), SeedKeyX4(seed.Second(), key + 4)};
+}
+
+constexpr ValueX16 SeedKeyX16(ValueX16 seed, uint64_t key) {
+    return {SeedKeyX8(seed.First(), key), SeedKeyX8(seed.Second(), key + 8)};
+}
+
 static_assert(SeedKey(0x400CAB, 13877892) == 0x585AB6);
 static_assert(SeedKey(0x7B4164, 13877892) == 0x551CB4);
 static_assert(SeedKey(0xF05B0C, 13877892) == 0x65CC8C);
