@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <x86intrin.h>
+#include <immintrin.h>
 #include <exception>
 
 /*
@@ -91,10 +92,197 @@ struct KeyX8 {
     uint32_t key1, key2, key3, key4, key5, key6, key7, key8;
 };
 
-//#define USE_AVX
-#define CHECK_PASS3BX8
-#define USE_SSE2
+struct KeyX16 {
+    uint32_t key1, key2, key3, key4, key5, key6, key7, key8, key9, key10, key11, key12, key13, key14, key15, key16;
+};
+
+#define CHECK_PASS3BX16
+//#define CHECK_PASS3BX8
 //#define CHECK_PASS3BX4
+
+#ifdef USE_AVX2
+inline KeyX16 SeedKeyPass3bx16(uint32_t state, uint32_t keyLeastSignificant24Bit) {
+    KeyX16 result;
+#ifdef CHECK_PASS3BX16
+    KeyX16 expected;
+    expected.key1 = SeedKeyPass3b(state, keyLeastSignificant24Bit);
+    expected.key2 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 1);
+    expected.key3 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 2);
+    expected.key4 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 3);
+    expected.key5 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 4);
+    expected.key6 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 5);
+    expected.key7 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 6);
+    expected.key8 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 7);
+    expected.key9 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 8);
+    expected.key10 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 9);
+    expected.key11 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 10);
+    expected.key12 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 11);
+    expected.key13 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 12);
+    expected.key14 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 13);
+    expected.key15 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 14);
+    expected.key16 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 15);
+#endif
+    __m128i one;
+    __m128i twentythree;
+    __m128i twenty;
+    __m128i sixteen;
+    __m128i fifthteen;
+    __m128i thirteen;
+    __m128i twelve;
+    __m128i six;
+    __m128i five;
+    __m128i four;
+    __m128i three;
+    {
+        alignas(16) uint32_t oneRaw[4] = {1, 0, 0, 0};
+        alignas(16) uint32_t twentythreeRaw[4] = {23, 0, 0, 0};
+        alignas(16) uint32_t twentyRaw[4] = {20, 0, 0, 0};
+        alignas(16) uint32_t sixteenRaw[4] = {16, 0, 0, 0};
+        alignas(16) uint32_t fifthteenRaw[4] = {15, 0, 0, 0};
+        alignas(16) uint32_t thirteenRaw[4] = {13, 0, 0, 0};
+        alignas(16) uint32_t twelveRaw[4] = {12, 0, 0, 0};
+        alignas(16) uint32_t sixRaw[4] = {6, 0, 0, 0};
+        alignas(16) uint32_t fiveRaw[4] = {5, 0, 0, 0};
+        alignas(16) uint32_t fourRaw[4] = {4, 0, 0, 0};
+        alignas(16) uint32_t threeRaw[4] = {3, 0, 0, 0};
+        one = _mm_load_si128((const __m128i *) oneRaw);
+        twentythree = _mm_load_si128((const __m128i *) twentythreeRaw);
+        twenty = _mm_load_si128((const __m128i *) twentyRaw);
+        sixteen = _mm_load_si128((const __m128i *) sixteenRaw);
+        fifthteen = _mm_load_si128((const __m128i *) fifthteenRaw);
+        thirteen = _mm_load_si128((const __m128i *) thirteenRaw);
+        twelve = _mm_load_si128((const __m128i *) twelveRaw);
+        six = _mm_load_si128((const __m128i *) sixRaw);
+        five = _mm_load_si128((const __m128i *) fiveRaw);
+        four = _mm_load_si128((const __m128i *) fourRaw);
+        three = _mm_load_si128((const __m128i *) threeRaw);
+    }
+    __m512i bitConstant;
+    __m512i statex4;
+    __m512i lowbitsx4;
+    __m512i maskx4;
+    {
+        alignas(64) uint32_t bitValuesRaw[16] = {
+                ((((uint32_t) (keyLeastSignificant24Bit + 0)) & 0xFF) << 8) |
+                (((uint32_t) ((keyLeastSignificant24Bit + 0) & 0xFF00)) >> 8),
+                ((((uint32_t) (keyLeastSignificant24Bit + 1)) & 0xFF) << 8) |
+                (((uint32_t) ((keyLeastSignificant24Bit + 1) & 0xFF00)) >> 8),
+                ((((uint32_t) (keyLeastSignificant24Bit + 2)) & 0xFF) << 8) |
+                (((uint32_t) ((keyLeastSignificant24Bit + 2) & 0xFF00)) >> 8),
+                ((((uint32_t) (keyLeastSignificant24Bit + 3)) & 0xFF) << 8) |
+                (((uint32_t) ((keyLeastSignificant24Bit + 3) & 0xFF00)) >> 8),
+                ((((uint32_t) (keyLeastSignificant24Bit + 4)) & 0xFF) << 8) |
+                (((uint32_t) ((keyLeastSignificant24Bit + 4) & 0xFF00)) >> 8),
+                ((((uint32_t) (keyLeastSignificant24Bit + 5)) & 0xFF) << 8) |
+                (((uint32_t) ((keyLeastSignificant24Bit + 5) & 0xFF00)) >> 8),
+                ((((uint32_t) (keyLeastSignificant24Bit + 6)) & 0xFF) << 8) |
+                (((uint32_t) ((keyLeastSignificant24Bit + 6) & 0xFF00)) >> 8),
+                ((((uint32_t) (keyLeastSignificant24Bit + 7)) & 0xFF) << 8) |
+                (((uint32_t) ((keyLeastSignificant24Bit + 7) & 0xFF00)) >> 8),
+
+                ((((uint32_t) (keyLeastSignificant24Bit + 8)) & 0xFF) << 8) |
+                (((uint32_t) ((keyLeastSignificant24Bit + 8) & 0xFF00)) >> 8),
+                ((((uint32_t) (keyLeastSignificant24Bit + 9)) & 0xFF) << 8) |
+                (((uint32_t) ((keyLeastSignificant24Bit + 9) & 0xFF00)) >> 8),
+                ((((uint32_t) (keyLeastSignificant24Bit + 10)) & 0xFF) << 8) |
+                (((uint32_t) ((keyLeastSignificant24Bit + 10) & 0xFF00)) >> 8),
+                ((((uint32_t) (keyLeastSignificant24Bit + 11)) & 0xFF) << 8) |
+                (((uint32_t) ((keyLeastSignificant24Bit + 11) & 0xFF00)) >> 8),
+                ((((uint32_t) (keyLeastSignificant24Bit + 12)) & 0xFF) << 8) |
+                (((uint32_t) ((keyLeastSignificant24Bit + 12) & 0xFF00)) >> 8),
+                ((((uint32_t) (keyLeastSignificant24Bit + 13)) & 0xFF) << 8) |
+                (((uint32_t) ((keyLeastSignificant24Bit + 13) & 0xFF00)) >> 8),
+                ((((uint32_t) (keyLeastSignificant24Bit + 14)) & 0xFF) << 8) |
+                (((uint32_t) ((keyLeastSignificant24Bit + 14) & 0xFF00)) >> 8),
+                ((((uint32_t) (keyLeastSignificant24Bit + 15)) & 0xFF) << 8) |
+                (((uint32_t) ((keyLeastSignificant24Bit + 15) & 0xFF00)) >> 8)};
+        alignas(64) uint32_t statex4Raw[16] = {state, state, state, state, state, state, state, state, state, state, state, state, state, state, state, state};
+        alignas(64) uint32_t lowbitsRaw[16] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+        alignas(64) uint32_t maskRaw[16] = {0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7};
+        bitConstant = _mm512_load_si512((__m512i const*) bitValuesRaw);
+        statex4 = _mm512_load_si512((__m512i const*) statex4Raw);
+        lowbitsx4 = _mm512_load_si512((__m512i const*) lowbitsRaw);
+        maskx4 = _mm512_load_si512((__m512i const*) maskRaw);
+    }
+    for (int i = 0; i < 16; i++) {
+        __m512i v3;
+        __m512i v3_bit23;
+        {
+            v3_bit23 = _mm512_xor_si512(bitConstant, statex4);
+            bitConstant = _mm512_srl_epi32(bitConstant, one);
+            v3_bit23 = _mm512_and_si512(v3_bit23, lowbitsx4);
+            v3 = _mm512_srl_epi32(statex4, one);
+            v3 = _mm512_or_si512(_mm512_sll_epi32(v3_bit23, twentythree), v3);
+        }
+        __m512i v3_bit20 = _mm512_srl_epi32(v3, twenty);
+        __m512i st_bit16 = _mm512_srl_epi32(statex4, sixteen); // b15
+        __m512i st_bit13 = _mm512_srl_epi32(statex4, thirteen); // b13
+        __m512i st_bit6 = _mm512_srl_epi32(statex4, six); // b5
+        __m512i st_bit4 = _mm512_srl_epi32(statex4, four); // b3
+        v3_bit20 = _mm512_and_si512(_mm512_xor_si512(v3_bit20, v3_bit23), lowbitsx4);
+        st_bit16 = _mm512_and_si512(_mm512_xor_si512(st_bit16, v3_bit23), lowbitsx4);
+        st_bit13 = _mm512_and_si512(_mm512_xor_si512(st_bit13, v3_bit23), lowbitsx4);
+        st_bit6 = _mm512_and_si512(_mm512_xor_si512(st_bit6, v3_bit23), lowbitsx4);
+        st_bit4 = _mm512_and_si512(_mm512_xor_si512(st_bit4, v3_bit23), lowbitsx4);
+
+        v3_bit20 = _mm512_sll_epi32(v3_bit20, twenty);
+        st_bit16 = _mm512_sll_epi32(st_bit16, fifthteen);
+        st_bit13 = _mm512_sll_epi32(st_bit13, twelve);
+        st_bit6 = _mm512_sll_epi32(st_bit6, five);
+        st_bit4 = _mm512_sll_epi32(st_bit4, three);
+
+        statex4 = _mm512_and_si512(v3, maskx4);
+        statex4 = _mm512_or_si512(statex4, v3_bit20);
+        statex4 = _mm512_or_si512(statex4, st_bit16);
+        statex4 = _mm512_or_si512(statex4, st_bit13);
+        statex4 = _mm512_or_si512(statex4, st_bit6);
+        statex4 = _mm512_or_si512(statex4, st_bit4);
+    }
+    uint32_t vals[16];
+    _mm512_store_si512(reinterpret_cast<__m512i*>(vals), statex4);
+    result.key1 = vals[0];
+    result.key2 = vals[1];
+    result.key3 = vals[2];
+    result.key4 = vals[3];
+    result.key5 = vals[4];
+    result.key6 = vals[5];
+    result.key7 = vals[6];
+    result.key8 = vals[7];
+    result.key9 = vals[8];
+    result.key10 = vals[9];
+    result.key11 = vals[10];
+    result.key12 = vals[11];
+    result.key13 = vals[12];
+    result.key14 = vals[13];
+    result.key15 = vals[14];
+    result.key16 = vals[15];
+    result.key1 = ((result.key1 & 0xF0000) >> 16) | ((result.key1 & 0xF) << 4) | ((result.key1 & 0xF00000) >> 12) | (result.key1 & 0xF000) | ((result.key1 & 0xFF0) << 12);
+    result.key2 = ((result.key2 & 0xF0000) >> 16) | ((result.key2 & 0xF) << 4) | ((result.key2 & 0xF00000) >> 12) | (result.key2 & 0xF000) | ((result.key2 & 0xFF0) << 12);
+    result.key3 = ((result.key3 & 0xF0000) >> 16) | ((result.key3 & 0xF) << 4) | ((result.key3 & 0xF00000) >> 12) | (result.key3 & 0xF000) | ((result.key3 & 0xFF0) << 12);
+    result.key4 = ((result.key4 & 0xF0000) >> 16) | ((result.key4 & 0xF) << 4) | ((result.key4 & 0xF00000) >> 12) | (result.key4 & 0xF000) | ((result.key4 & 0xFF0) << 12);
+    result.key5 = ((result.key5 & 0xF0000) >> 16) | ((result.key5 & 0xF) << 4) | ((result.key5 & 0xF00000) >> 12) | (result.key5 & 0xF000) | ((result.key5 & 0xFF0) << 12);
+    result.key6 = ((result.key6 & 0xF0000) >> 16) | ((result.key6 & 0xF) << 4) | ((result.key6 & 0xF00000) >> 12) | (result.key6 & 0xF000) | ((result.key6 & 0xFF0) << 12);
+    result.key7 = ((result.key7 & 0xF0000) >> 16) | ((result.key7 & 0xF) << 4) | ((result.key7 & 0xF00000) >> 12) | (result.key7 & 0xF000) | ((result.key7 & 0xFF0) << 12);
+    result.key8 = ((result.key8 & 0xF0000) >> 16) | ((result.key8 & 0xF) << 4) | ((result.key8 & 0xF00000) >> 12) | (result.key8 & 0xF000) | ((result.key8 & 0xFF0) << 12);
+    result.key9 = ((result.key9 & 0xF0000) >> 16) | ((result.key9 & 0xF) << 4) | ((result.key9 & 0xF00000) >> 12) | (result.key9 & 0xF000) | ((result.key9 & 0xFF0) << 12);
+    result.key10 = ((result.key10 & 0xF0000) >> 16) | ((result.key10 & 0xF) << 4) | ((result.key10 & 0xF00000) >> 12) | (result.key10 & 0xF000) | ((result.key10 & 0xFF0) << 12);
+    result.key11 = ((result.key11 & 0xF0000) >> 16) | ((result.key11 & 0xF) << 4) | ((result.key11 & 0xF00000) >> 12) | (result.key11 & 0xF000) | ((result.key11 & 0xFF0) << 12);
+    result.key12 = ((result.key12 & 0xF0000) >> 16) | ((result.key12 & 0xF) << 4) | ((result.key12 & 0xF00000) >> 12) | (result.key12 & 0xF000) | ((result.key12 & 0xFF0) << 12);
+    result.key13 = ((result.key13 & 0xF0000) >> 16) | ((result.key13 & 0xF) << 4) | ((result.key13 & 0xF00000) >> 12) | (result.key13 & 0xF000) | ((result.key13 & 0xFF0) << 12);
+    result.key14 = ((result.key14 & 0xF0000) >> 16) | ((result.key14 & 0xF) << 4) | ((result.key14 & 0xF00000) >> 12) | (result.key14 & 0xF000) | ((result.key14 & 0xFF0) << 12);
+    result.key15 = ((result.key15 & 0xF0000) >> 16) | ((result.key15 & 0xF) << 4) | ((result.key15 & 0xF00000) >> 12) | (result.key15 & 0xF000) | ((result.key15 & 0xFF0) << 12);
+    result.key16 = ((result.key16 & 0xF0000) >> 16) | ((result.key16 & 0xF) << 4) | ((result.key16 & 0xF00000) >> 12) | (result.key16 & 0xF000) | ((result.key16 & 0xFF0) << 12);
+#ifdef CHECK_PASS3BX16
+    if (result.key1 != expected.key1 || result.key2 != expected.key2 || result.key3 != expected.key3 || result.key4 != expected.key4 || result.key5 != expected.key5 || result.key6 != expected.key6 || result.key7 != expected.key7 || result.key8 != expected.key8) {
+        std::terminate();
+    }
+    if (result.key9 != expected.key9 || result.key10 != expected.key10 || result.key11 != expected.key11 || result.key12 != expected.key12 || result.key13 != expected.key13 || result.key14 != expected.key14 || result.key15 != expected.key15 || result.key16 != expected.key16) {
+        std::terminate();
+    }
+#endif
+    return result;
+}
+#endif
 
 #ifdef USE_AVX
 KeyX8 SeedKeyPass3bx8(uint32_t state, uint32_t keyLeastSignificant24Bit) {
@@ -115,7 +303,7 @@ KeyX8 SeedKeyPass3bx8(uint32_t state, uint32_t keyLeastSignificant24Bit) {
     __m256i lowbitsx4;
     __m256i maskx4;
     {
-        uint32_t bitValuesRaw[8] = {
+        alignas(32) uint32_t bitValuesRaw[8] = {
                 ((((uint32_t) (keyLeastSignificant24Bit + 0)) & 0xFF) << 8) |
                 (((uint32_t) ((keyLeastSignificant24Bit + 0) & 0xFF00)) >> 8),
                 ((((uint32_t) (keyLeastSignificant24Bit + 1)) & 0xFF) << 8) |
@@ -132,9 +320,9 @@ KeyX8 SeedKeyPass3bx8(uint32_t state, uint32_t keyLeastSignificant24Bit) {
                 (((uint32_t) ((keyLeastSignificant24Bit + 6) & 0xFF00)) >> 8),
                 ((((uint32_t) (keyLeastSignificant24Bit + 7)) & 0xFF) << 8) |
                 (((uint32_t) ((keyLeastSignificant24Bit + 7) & 0xFF00)) >> 8)};
-        uint32_t statex4Raw[8] = {state, state, state, state, state, state, state, state};
-        uint32_t lowbitsRaw[8] = {1, 1, 1, 1, 1, 1, 1, 1};
-        uint32_t maskRaw[8] = {0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7};
+        alignas(32) uint32_t statex4Raw[8] = {state, state, state, state, state, state, state, state};
+        alignas(32) uint32_t lowbitsRaw[8] = {1, 1, 1, 1, 1, 1, 1, 1};
+        alignas(32) uint32_t maskRaw[8] = {0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7};
         bitConstant = _mm256_load_si256((__m256i const*) bitValuesRaw);
         statex4 = _mm256_load_si256((__m256i const*) statex4Raw);
         lowbitsx4 = _mm256_load_si256((__m256i const*) lowbitsRaw);
@@ -180,10 +368,10 @@ KeyX8 SeedKeyPass3bx8(uint32_t state, uint32_t keyLeastSignificant24Bit) {
     result.key2 = vals[1];
     result.key3 = vals[2];
     result.key4 = vals[3];
-    result.key1 = vals[4];
-    result.key2 = vals[5];
-    result.key3 = vals[6];
-    result.key4 = vals[7];
+    result.key5 = vals[4];
+    result.key6 = vals[5];
+    result.key7 = vals[6];
+    result.key8 = vals[7];
     result.key1 = ((result.key1 & 0xF0000) >> 16) | ((result.key1 & 0xF) << 4) | ((result.key1 & 0xF00000) >> 12) | (result.key1 & 0xF000) | ((result.key1 & 0xFF0) << 12);
     result.key2 = ((result.key2 & 0xF0000) >> 16) | ((result.key2 & 0xF) << 4) | ((result.key2 & 0xF00000) >> 12) | (result.key2 & 0xF000) | ((result.key2 & 0xFF0) << 12);
     result.key3 = ((result.key3 & 0xF0000) >> 16) | ((result.key3 & 0xF) << 4) | ((result.key3 & 0xF00000) >> 12) | (result.key3 & 0xF000) | ((result.key3 & 0xFF0) << 12);
