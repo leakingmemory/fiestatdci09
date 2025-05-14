@@ -102,7 +102,7 @@ int main() {
             }
         }
         std::vector<std::thread> threads{};
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 1; i++) {
             threads.emplace_back([&mtx, &tasks] () {
                 while (true) {
                     std::function<void ()> func{};
