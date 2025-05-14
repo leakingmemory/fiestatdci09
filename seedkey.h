@@ -10,6 +10,50 @@
 #include <immintrin.h>
 #include <exception>
 
+struct ValueX2 {
+    constexpr ValueX2() : value1(0), value2(0) {}
+    constexpr ValueX2(uint32_t v1, uint32_t v2) : value1(v1), value2(v2) {}
+    uint32_t value1, value2;
+};
+
+struct ValueX4 {
+    constexpr ValueX4() : value1(0), value2(0), value3(0), value4(0) {}
+    constexpr ValueX4(uint32_t v1, uint32_t v2, uint32_t v3, uint32_t v4) : value1(v1), value2(v2), value3(v3), value4(v4) {}
+    constexpr ValueX4(ValueX2 first, ValueX2 second) : value1(first.value1), value2(first.value2), value3(second.value1), value4(second.value2) {}
+    uint32_t value1, value2, value3, value4;
+    constexpr ValueX2 First() {
+        return {value1, value2};
+    }
+    constexpr ValueX2 Second() {
+        return {value3, value4};
+    }
+};
+
+struct ValueX8 {
+    ValueX8() = default;
+    constexpr ValueX8(uint32_t v1, uint32_t v2, uint32_t v3, uint32_t v4, uint32_t v5, uint32_t v6, uint32_t v7, uint32_t v8) : value1(v1), value2(v2), value3(v3), value4(v4), value5(v5), value6(v6), value7(v7), value8(v8) {}
+    constexpr ValueX8(ValueX4 first, ValueX4 second) : value1(first.value1), value2(first.value2), value3(first.value3), value4(first.value4), value5(second.value1), value6(second.value2), value7(second.value3), value8(second.value4) {}
+    uint32_t value1, value2, value3, value4, value5, value6, value7, value8;
+    constexpr ValueX4 First() {
+        return {value1, value2, value3, value4};
+    }
+    constexpr ValueX4 Second() {
+        return {value5, value6, value7, value8};
+    }
+};
+
+struct ValueX16 {
+    ValueX16() = default;
+    constexpr ValueX16(ValueX8 first, ValueX8 second) : value1(first.value1), value2(first.value2), value3(first.value3), value4(first.value4), value5(first.value5), value6(first.value6), value7(first.value7), value8(first.value8), value9(second.value1), value10(second.value2), value11(second.value3), value12(second.value4), value13(second.value5), value14(second.value6), value15(second.value7), value16(second.value8) {}
+    uint32_t value1, value2, value3, value4, value5, value6, value7, value8, value9, value10, value11, value12, value13, value14, value15, value16;
+    constexpr ValueX8 First() {
+        return {value1, value2, value3, value4, value5, value6, value7, value8};
+    }
+    constexpr ValueX8 Second() {
+        return {value9, value10, value11, value12, value13, value14, value15, value16};
+    }
+};
+
 /*
  * Based on https://github.com/andrewraharjo/CAN-Bus-Hack_Prius_Focus
  *
@@ -82,50 +126,6 @@ constexpr uint32_t SeedKeyPass3b(uint32_t state, uint32_t keyLeastSignificant24B
     }
     return ((state & 0xF0000) >> 16) | ((state & 0xF) << 4) | ((state & 0xF00000) >> 12) | (state & 0xF000) | ((state & 0xFF0) << 12);
 }
-
-struct ValueX2 {
-    constexpr ValueX2() : value1(0), value2(0) {}
-    constexpr ValueX2(uint32_t v1, uint32_t v2) : value1(v1), value2(v2) {}
-    uint32_t value1, value2;
-};
-
-struct ValueX4 {
-    constexpr ValueX4() : value1(0), value2(0), value3(0), value4(0) {}
-    constexpr ValueX4(uint32_t v1, uint32_t v2, uint32_t v3, uint32_t v4) : value1(v1), value2(v2), value3(v3), value4(v4) {}
-    constexpr ValueX4(ValueX2 first, ValueX2 second) : value1(first.value1), value2(first.value2), value3(second.value1), value4(second.value2) {}
-    uint32_t value1, value2, value3, value4;
-    constexpr ValueX2 First() {
-        return {value1, value2};
-    }
-    constexpr ValueX2 Second() {
-        return {value3, value4};
-    }
-};
-
-struct ValueX8 {
-    ValueX8() = default;
-    constexpr ValueX8(uint32_t v1, uint32_t v2, uint32_t v3, uint32_t v4, uint32_t v5, uint32_t v6, uint32_t v7, uint32_t v8) : value1(v1), value2(v2), value3(v3), value4(v4), value5(v5), value6(v6), value7(v7), value8(v8) {}
-    constexpr ValueX8(ValueX4 first, ValueX4 second) : value1(first.value1), value2(first.value2), value3(first.value3), value4(first.value4), value5(second.value1), value6(second.value2), value7(second.value3), value8(second.value4) {}
-    uint32_t value1, value2, value3, value4, value5, value6, value7, value8;
-    constexpr ValueX4 First() {
-        return {value1, value2, value3, value4};
-    }
-    constexpr ValueX4 Second() {
-        return {value5, value6, value7, value8};
-    }
-};
-
-struct ValueX16 {
-    ValueX16() = default;
-    constexpr ValueX16(ValueX8 first, ValueX8 second) : value1(first.value1), value2(first.value2), value3(first.value3), value4(first.value4), value5(first.value5), value6(first.value6), value7(first.value7), value8(first.value8), value9(second.value1), value10(second.value2), value11(second.value3), value12(second.value4), value13(second.value5), value14(second.value6), value15(second.value7), value16(second.value8) {}
-    uint32_t value1, value2, value3, value4, value5, value6, value7, value8, value9, value10, value11, value12, value13, value14, value15, value16;
-    constexpr ValueX8 First() {
-        return {value1, value2, value3, value4, value5, value6, value7, value8};
-    }
-    constexpr ValueX8 Second() {
-        return {value9, value10, value11, value12, value13, value14, value15, value16};
-    }
-};
 
 #define CHECK_PASS3BX16
 //#define CHECK_PASS3BX8
