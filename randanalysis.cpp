@@ -43,8 +43,13 @@ int main() {
                     auto pass2 = SeedKeyPass2(pass1, ((uint32_t) keyHighL) << 24);
                     for (int keyMiddle = 0; keyMiddle < 256; keyMiddle++) {
                         auto pass3a = SeedKeyPass3a(pass2, ((uint32_t) keyMiddle) << 16);
+#ifdef USE_AVX
+                        for (int keyLow = 0; keyLow < 65536; keyLow += 8) {
+                            auto v = SeedKeyPass3bx8(pass3a, (uint32_t) keyLow);
+#else
                         for (int keyLow = 0; keyLow < 65536; keyLow += 4) {
                             auto v = SeedKeyPass3bx4(pass3a, (uint32_t) keyLow);
+#endif
                             if (v.key1 == sequence[i + 1]) {
                                 uint16_t keyHigh = keyHighH;
                                 keyHigh = keyHigh << 8;
@@ -96,6 +101,60 @@ int main() {
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
+#ifdef USE_AVX
+                            if (v.key5 == sequence[i + 1]) {
+                                uint16_t keyHigh = keyHighH;
+                                keyHigh = keyHigh << 8;
+                                keyHigh |= keyHighL;
+                                uint64_t key = keyHigh;
+                                key = key << 24;
+                                key |= keyMiddle << 16;
+                                key |= keyLow;
+                                key += 4;
+                                std::lock_guard lock{mtx};
+                                std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
+                                foundKeys.emplace_back(key);
+                            }
+                            if (v.key6 == sequence[i + 1]) {
+                                uint16_t keyHigh = keyHighH;
+                                keyHigh = keyHigh << 8;
+                                keyHigh |= keyHighL;
+                                uint64_t key = keyHigh;
+                                key = key << 24;
+                                key |= keyMiddle << 16;
+                                key |= keyLow;
+                                key += 5;
+                                std::lock_guard lock{mtx};
+                                std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
+                                foundKeys.emplace_back(key);
+                            }
+                            if (v.key7 == sequence[i + 1]) {
+                                uint16_t keyHigh = keyHighH;
+                                keyHigh = keyHigh << 8;
+                                keyHigh |= keyHighL;
+                                uint64_t key = keyHigh;
+                                key = key << 24;
+                                key |= keyMiddle << 16;
+                                key |= keyLow;
+                                key += 6;
+                                std::lock_guard lock{mtx};
+                                std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
+                                foundKeys.emplace_back(key);
+                            }
+                            if (v.key8 == sequence[i + 1]) {
+                                uint16_t keyHigh = keyHighH;
+                                keyHigh = keyHigh << 8;
+                                keyHigh |= keyHighL;
+                                uint64_t key = keyHigh;
+                                key = key << 24;
+                                key |= keyMiddle << 16;
+                                key |= keyLow;
+                                key += 7;
+                                std::lock_guard lock{mtx};
+                                std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
+                                foundKeys.emplace_back(key);
+                            }
+#endif
                         }
                     }
                 });
