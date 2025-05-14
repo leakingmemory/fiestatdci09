@@ -83,44 +83,78 @@ constexpr uint32_t SeedKeyPass3b(uint32_t state, uint32_t keyLeastSignificant24B
     return ((state & 0xF0000) >> 16) | ((state & 0xF) << 4) | ((state & 0xF00000) >> 12) | (state & 0xF000) | ((state & 0xFF0) << 12);
 }
 
-struct KeyX4 {
-    constexpr KeyX4() : key1(0), key2(0), key3(0), key4(0) {}
-    uint32_t key1, key2, key3, key4;
+struct ValueX2 {
+    constexpr ValueX2() : value1(0), value2(0) {}
+    constexpr ValueX2(uint32_t v1, uint32_t v2) : value1(v1), value2(v2) {}
+    uint32_t value1, value2;
 };
 
-struct KeyX8 {
-    uint32_t key1, key2, key3, key4, key5, key6, key7, key8;
+struct ValueX4 {
+    constexpr ValueX4() : value1(0), value2(0), value3(0), value4(0) {}
+    constexpr ValueX4(uint32_t v1, uint32_t v2, uint32_t v3, uint32_t v4) : value1(v1), value2(v2), value3(v3), value4(v4) {}
+    constexpr ValueX4(ValueX2 first, ValueX2 second) : value1(first.value1), value2(first.value2), value3(second.value1), value4(second.value2) {}
+    uint32_t value1, value2, value3, value4;
+    constexpr ValueX2 First() {
+        return {value1, value2};
+    }
+    constexpr ValueX2 Second() {
+        return {value3, value4};
+    }
 };
 
-struct KeyX16 {
-    uint32_t key1, key2, key3, key4, key5, key6, key7, key8, key9, key10, key11, key12, key13, key14, key15, key16;
+struct ValueX8 {
+    ValueX8() = default;
+    constexpr ValueX8(uint32_t v1, uint32_t v2, uint32_t v3, uint32_t v4, uint32_t v5, uint32_t v6, uint32_t v7, uint32_t v8) : value1(v1), value2(v2), value3(v3), value4(v4), value5(v5), value6(v6), value7(v7), value8(v8) {}
+    constexpr ValueX8(ValueX4 first, ValueX4 second) : value1(first.value1), value2(first.value2), value3(first.value3), value4(first.value4), value5(second.value1), value6(second.value2), value7(second.value3), value8(second.value4) {}
+    uint32_t value1, value2, value3, value4, value5, value6, value7, value8;
+    constexpr ValueX4 First() {
+        return {value1, value2, value3, value4};
+    }
+    constexpr ValueX4 Second() {
+        return {value5, value6, value7, value8};
+    }
+};
+
+struct ValueX16 {
+    ValueX16() = default;
+    constexpr ValueX16(ValueX8 first, ValueX8 second) : value1(first.value1), value2(first.value2), value3(first.value3), value4(first.value4), value5(first.value5), value6(first.value6), value7(first.value7), value8(first.value8), value9(second.value1), value10(second.value2), value11(second.value3), value12(second.value4), value13(second.value5), value14(second.value6), value15(second.value7), value16(second.value8) {}
+    uint32_t value1, value2, value3, value4, value5, value6, value7, value8, value9, value10, value11, value12, value13, value14, value15, value16;
+    constexpr ValueX8 First() {
+        return {value1, value2, value3, value4, value5, value6, value7, value8};
+    }
+    constexpr ValueX8 Second() {
+        return {value9, value10, value11, value12, value13, value14, value15, value16};
+    }
 };
 
 #define CHECK_PASS3BX16
 //#define CHECK_PASS3BX8
 //#define CHECK_PASS3BX4
 
+ValueX8 SeedKeyPass3bx8(uint32_t state, uint32_t keyLeastSignificant24Bit);
+ValueX4 SeedKeyPass3bx4(uint32_t state, uint32_t keyLeastSignificant24Bit);
+
 #ifdef USE_AVX2
-inline KeyX16 SeedKeyPass3bx16(uint32_t state, uint32_t keyLeastSignificant24Bit) {
-    KeyX16 result;
+inline ValueX16 SeedKeyPass3bx16(uint32_t state, uint32_t keyLeastSignificant24Bit) {
+    ValueX16 result;
 #ifdef CHECK_PASS3BX16
-    KeyX16 expected;
-    expected.key1 = SeedKeyPass3b(state, keyLeastSignificant24Bit);
-    expected.key2 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 1);
-    expected.key3 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 2);
-    expected.key4 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 3);
-    expected.key5 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 4);
-    expected.key6 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 5);
-    expected.key7 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 6);
-    expected.key8 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 7);
-    expected.key9 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 8);
-    expected.key10 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 9);
-    expected.key11 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 10);
-    expected.key12 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 11);
-    expected.key13 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 12);
-    expected.key14 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 13);
-    expected.key15 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 14);
-    expected.key16 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 15);
+    ValueX16 expected;
+    expected.value1 = SeedKeyPass3b(state, keyLeastSignificant24Bit);
+    expected.value2 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 1);
+    expected.value3 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 2);
+    expected.value4 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 3);
+    expected.value5 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 4);
+    expected.value6 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 5);
+    expected.value7 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 6);
+    expected.value8 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 7);
+    expected.value9 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 8);
+    expected.value10 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 9);
+    expected.value11 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 10);
+    expected.value12 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 11);
+    expected.value13 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 12);
+    expected.value14 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 13);
+    expected.value15 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 14);
+    expected.value16 = SeedKeyPass3b(state, keyLeastSignificant24Bit + 15);
 #endif
     __m128i one;
     __m128i twentythree;
@@ -240,53 +274,57 @@ inline KeyX16 SeedKeyPass3bx16(uint32_t state, uint32_t keyLeastSignificant24Bit
     }
     uint32_t vals[16];
     _mm512_store_si512(reinterpret_cast<__m512i*>(vals), statex4);
-    result.key1 = vals[0];
-    result.key2 = vals[1];
-    result.key3 = vals[2];
-    result.key4 = vals[3];
-    result.key5 = vals[4];
-    result.key6 = vals[5];
-    result.key7 = vals[6];
-    result.key8 = vals[7];
-    result.key9 = vals[8];
-    result.key10 = vals[9];
-    result.key11 = vals[10];
-    result.key12 = vals[11];
-    result.key13 = vals[12];
-    result.key14 = vals[13];
-    result.key15 = vals[14];
-    result.key16 = vals[15];
-    result.key1 = ((result.key1 & 0xF0000) >> 16) | ((result.key1 & 0xF) << 4) | ((result.key1 & 0xF00000) >> 12) | (result.key1 & 0xF000) | ((result.key1 & 0xFF0) << 12);
-    result.key2 = ((result.key2 & 0xF0000) >> 16) | ((result.key2 & 0xF) << 4) | ((result.key2 & 0xF00000) >> 12) | (result.key2 & 0xF000) | ((result.key2 & 0xFF0) << 12);
-    result.key3 = ((result.key3 & 0xF0000) >> 16) | ((result.key3 & 0xF) << 4) | ((result.key3 & 0xF00000) >> 12) | (result.key3 & 0xF000) | ((result.key3 & 0xFF0) << 12);
-    result.key4 = ((result.key4 & 0xF0000) >> 16) | ((result.key4 & 0xF) << 4) | ((result.key4 & 0xF00000) >> 12) | (result.key4 & 0xF000) | ((result.key4 & 0xFF0) << 12);
-    result.key5 = ((result.key5 & 0xF0000) >> 16) | ((result.key5 & 0xF) << 4) | ((result.key5 & 0xF00000) >> 12) | (result.key5 & 0xF000) | ((result.key5 & 0xFF0) << 12);
-    result.key6 = ((result.key6 & 0xF0000) >> 16) | ((result.key6 & 0xF) << 4) | ((result.key6 & 0xF00000) >> 12) | (result.key6 & 0xF000) | ((result.key6 & 0xFF0) << 12);
-    result.key7 = ((result.key7 & 0xF0000) >> 16) | ((result.key7 & 0xF) << 4) | ((result.key7 & 0xF00000) >> 12) | (result.key7 & 0xF000) | ((result.key7 & 0xFF0) << 12);
-    result.key8 = ((result.key8 & 0xF0000) >> 16) | ((result.key8 & 0xF) << 4) | ((result.key8 & 0xF00000) >> 12) | (result.key8 & 0xF000) | ((result.key8 & 0xFF0) << 12);
-    result.key9 = ((result.key9 & 0xF0000) >> 16) | ((result.key9 & 0xF) << 4) | ((result.key9 & 0xF00000) >> 12) | (result.key9 & 0xF000) | ((result.key9 & 0xFF0) << 12);
-    result.key10 = ((result.key10 & 0xF0000) >> 16) | ((result.key10 & 0xF) << 4) | ((result.key10 & 0xF00000) >> 12) | (result.key10 & 0xF000) | ((result.key10 & 0xFF0) << 12);
-    result.key11 = ((result.key11 & 0xF0000) >> 16) | ((result.key11 & 0xF) << 4) | ((result.key11 & 0xF00000) >> 12) | (result.key11 & 0xF000) | ((result.key11 & 0xFF0) << 12);
-    result.key12 = ((result.key12 & 0xF0000) >> 16) | ((result.key12 & 0xF) << 4) | ((result.key12 & 0xF00000) >> 12) | (result.key12 & 0xF000) | ((result.key12 & 0xFF0) << 12);
-    result.key13 = ((result.key13 & 0xF0000) >> 16) | ((result.key13 & 0xF) << 4) | ((result.key13 & 0xF00000) >> 12) | (result.key13 & 0xF000) | ((result.key13 & 0xFF0) << 12);
-    result.key14 = ((result.key14 & 0xF0000) >> 16) | ((result.key14 & 0xF) << 4) | ((result.key14 & 0xF00000) >> 12) | (result.key14 & 0xF000) | ((result.key14 & 0xFF0) << 12);
-    result.key15 = ((result.key15 & 0xF0000) >> 16) | ((result.key15 & 0xF) << 4) | ((result.key15 & 0xF00000) >> 12) | (result.key15 & 0xF000) | ((result.key15 & 0xFF0) << 12);
-    result.key16 = ((result.key16 & 0xF0000) >> 16) | ((result.key16 & 0xF) << 4) | ((result.key16 & 0xF00000) >> 12) | (result.key16 & 0xF000) | ((result.key16 & 0xFF0) << 12);
+    result.value1 = vals[0];
+    result.value2 = vals[1];
+    result.value3 = vals[2];
+    result.value4 = vals[3];
+    result.value5 = vals[4];
+    result.value6 = vals[5];
+    result.value7 = vals[6];
+    result.value8 = vals[7];
+    result.value9 = vals[8];
+    result.value10 = vals[9];
+    result.value11 = vals[10];
+    result.value12 = vals[11];
+    result.value13 = vals[12];
+    result.value14 = vals[13];
+    result.value15 = vals[14];
+    result.value16 = vals[15];
+    result.value1 = ((result.value1 & 0xF0000) >> 16) | ((result.value1 & 0xF) << 4) | ((result.value1 & 0xF00000) >> 12) | (result.value1 & 0xF000) | ((result.value1 & 0xFF0) << 12);
+    result.value2 = ((result.value2 & 0xF0000) >> 16) | ((result.value2 & 0xF) << 4) | ((result.value2 & 0xF00000) >> 12) | (result.value2 & 0xF000) | ((result.value2 & 0xFF0) << 12);
+    result.value3 = ((result.value3 & 0xF0000) >> 16) | ((result.value3 & 0xF) << 4) | ((result.value3 & 0xF00000) >> 12) | (result.value3 & 0xF000) | ((result.value3 & 0xFF0) << 12);
+    result.value4 = ((result.value4 & 0xF0000) >> 16) | ((result.value4 & 0xF) << 4) | ((result.value4 & 0xF00000) >> 12) | (result.value4 & 0xF000) | ((result.value4 & 0xFF0) << 12);
+    result.value5 = ((result.value5 & 0xF0000) >> 16) | ((result.value5 & 0xF) << 4) | ((result.value5 & 0xF00000) >> 12) | (result.value5 & 0xF000) | ((result.value5 & 0xFF0) << 12);
+    result.value6 = ((result.value6 & 0xF0000) >> 16) | ((result.value6 & 0xF) << 4) | ((result.value6 & 0xF00000) >> 12) | (result.value6 & 0xF000) | ((result.value6 & 0xFF0) << 12);
+    result.value7 = ((result.value7 & 0xF0000) >> 16) | ((result.value7 & 0xF) << 4) | ((result.value7 & 0xF00000) >> 12) | (result.value7 & 0xF000) | ((result.value7 & 0xFF0) << 12);
+    result.value8 = ((result.value8 & 0xF0000) >> 16) | ((result.value8 & 0xF) << 4) | ((result.value8 & 0xF00000) >> 12) | (result.value8 & 0xF000) | ((result.value8 & 0xFF0) << 12);
+    result.value9 = ((result.value9 & 0xF0000) >> 16) | ((result.value9 & 0xF) << 4) | ((result.value9 & 0xF00000) >> 12) | (result.value9 & 0xF000) | ((result.value9 & 0xFF0) << 12);
+    result.value10 = ((result.value10 & 0xF0000) >> 16) | ((result.value10 & 0xF) << 4) | ((result.value10 & 0xF00000) >> 12) | (result.value10 & 0xF000) | ((result.value10 & 0xFF0) << 12);
+    result.value11 = ((result.value11 & 0xF0000) >> 16) | ((result.value11 & 0xF) << 4) | ((result.value11 & 0xF00000) >> 12) | (result.value11 & 0xF000) | ((result.value11 & 0xFF0) << 12);
+    result.value12 = ((result.value12 & 0xF0000) >> 16) | ((result.value12 & 0xF) << 4) | ((result.value12 & 0xF00000) >> 12) | (result.value12 & 0xF000) | ((result.value12 & 0xFF0) << 12);
+    result.value13 = ((result.value13 & 0xF0000) >> 16) | ((result.value13 & 0xF) << 4) | ((result.value13 & 0xF00000) >> 12) | (result.value13 & 0xF000) | ((result.value13 & 0xFF0) << 12);
+    result.value14 = ((result.value14 & 0xF0000) >> 16) | ((result.value14 & 0xF) << 4) | ((result.value14 & 0xF00000) >> 12) | (result.value14 & 0xF000) | ((result.value14 & 0xFF0) << 12);
+    result.value15 = ((result.value15 & 0xF0000) >> 16) | ((result.value15 & 0xF) << 4) | ((result.value15 & 0xF00000) >> 12) | (result.value15 & 0xF000) | ((result.value15 & 0xFF0) << 12);
+    result.value16 = ((result.value16 & 0xF0000) >> 16) | ((result.value16 & 0xF) << 4) | ((result.value16 & 0xF00000) >> 12) | (result.value16 & 0xF000) | ((result.value16 & 0xFF0) << 12);
 #ifdef CHECK_PASS3BX16
-    if (result.key1 != expected.key1 || result.key2 != expected.key2 || result.key3 != expected.key3 || result.key4 != expected.key4 || result.key5 != expected.key5 || result.key6 != expected.key6 || result.key7 != expected.key7 || result.key8 != expected.key8) {
+    if (result.value1 != expected.value1 || result.value2 != expected.value2 || result.value3 != expected.value3 || result.value4 != expected.value4 || result.value5 != expected.value5 || result.value6 != expected.value6 || result.value7 != expected.value7 || result.value8 != expected.value8) {
         std::terminate();
     }
-    if (result.key9 != expected.key9 || result.key10 != expected.key10 || result.key11 != expected.key11 || result.key12 != expected.key12 || result.key13 != expected.key13 || result.key14 != expected.key14 || result.key15 != expected.key15 || result.key16 != expected.key16) {
+    if (result.value9 != expected.value9 || result.value10 != expected.value10 || result.value11 != expected.value11 || result.value12 != expected.value12 || result.value13 != expected.value13 || result.value14 != expected.value14 || result.value15 != expected.value15 || result.value16 != expected.value16) {
         std::terminate();
     }
 #endif
     return result;
 }
+#else
+inline ValueX16 SeedKeyPass3bx16(uint32_t state, uint32_t keyLeastSignificant24Bit) {
+    return {SeedKeyPass3bx8(state, keyLeastSignificant24Bit), SeedKeyPass3bx8(state, keyLeastSignificant24Bit + 8)};
+}
 #endif
 
 #ifdef USE_AVX
-KeyX8 SeedKeyPass3bx8(uint32_t state, uint32_t keyLeastSignificant24Bit) {
-    KeyX8 result;
+ValueX8 SeedKeyPass3bx8(uint32_t state, uint32_t keyLeastSignificant24Bit) {
+    ValueX8 result;
 #ifdef CHECK_PASS3BX8
     KeyX8 expected;
     expected.key1 = SeedKeyPass3b(state, keyLeastSignificant24Bit);
@@ -364,28 +402,32 @@ KeyX8 SeedKeyPass3bx8(uint32_t state, uint32_t keyLeastSignificant24Bit) {
     }
     uint32_t vals[8];
     _mm256_store_si256(reinterpret_cast<__m256i*>(vals), statex4);
-    result.key1 = vals[0];
-    result.key2 = vals[1];
-    result.key3 = vals[2];
-    result.key4 = vals[3];
-    result.key5 = vals[4];
-    result.key6 = vals[5];
-    result.key7 = vals[6];
-    result.key8 = vals[7];
-    result.key1 = ((result.key1 & 0xF0000) >> 16) | ((result.key1 & 0xF) << 4) | ((result.key1 & 0xF00000) >> 12) | (result.key1 & 0xF000) | ((result.key1 & 0xFF0) << 12);
-    result.key2 = ((result.key2 & 0xF0000) >> 16) | ((result.key2 & 0xF) << 4) | ((result.key2 & 0xF00000) >> 12) | (result.key2 & 0xF000) | ((result.key2 & 0xFF0) << 12);
-    result.key3 = ((result.key3 & 0xF0000) >> 16) | ((result.key3 & 0xF) << 4) | ((result.key3 & 0xF00000) >> 12) | (result.key3 & 0xF000) | ((result.key3 & 0xFF0) << 12);
-    result.key4 = ((result.key4 & 0xF0000) >> 16) | ((result.key4 & 0xF) << 4) | ((result.key4 & 0xF00000) >> 12) | (result.key4 & 0xF000) | ((result.key4 & 0xFF0) << 12);
-    result.key5 = ((result.key5 & 0xF0000) >> 16) | ((result.key5 & 0xF) << 4) | ((result.key5 & 0xF00000) >> 12) | (result.key5 & 0xF000) | ((result.key5 & 0xFF0) << 12);
-    result.key6 = ((result.key6 & 0xF0000) >> 16) | ((result.key6 & 0xF) << 4) | ((result.key6 & 0xF00000) >> 12) | (result.key6 & 0xF000) | ((result.key6 & 0xFF0) << 12);
-    result.key7 = ((result.key7 & 0xF0000) >> 16) | ((result.key7 & 0xF) << 4) | ((result.key7 & 0xF00000) >> 12) | (result.key7 & 0xF000) | ((result.key7 & 0xFF0) << 12);
-    result.key8 = ((result.key8 & 0xF0000) >> 16) | ((result.key8 & 0xF) << 4) | ((result.key8 & 0xF00000) >> 12) | (result.key8 & 0xF000) | ((result.key8 & 0xFF0) << 12);
+    result.value1 = vals[0];
+    result.value2 = vals[1];
+    result.value3 = vals[2];
+    result.value4 = vals[3];
+    result.value5 = vals[4];
+    result.value6 = vals[5];
+    result.value7 = vals[6];
+    result.value8 = vals[7];
+    result.value1 = ((result.value1 & 0xF0000) >> 16) | ((result.value1 & 0xF) << 4) | ((result.value1 & 0xF00000) >> 12) | (result.value1 & 0xF000) | ((result.value1 & 0xFF0) << 12);
+    result.value2 = ((result.value2 & 0xF0000) >> 16) | ((result.value2 & 0xF) << 4) | ((result.value2 & 0xF00000) >> 12) | (result.value2 & 0xF000) | ((result.value2 & 0xFF0) << 12);
+    result.value3 = ((result.value3 & 0xF0000) >> 16) | ((result.value3 & 0xF) << 4) | ((result.value3 & 0xF00000) >> 12) | (result.value3 & 0xF000) | ((result.value3 & 0xFF0) << 12);
+    result.value4 = ((result.value4 & 0xF0000) >> 16) | ((result.value4 & 0xF) << 4) | ((result.value4 & 0xF00000) >> 12) | (result.value4 & 0xF000) | ((result.value4 & 0xFF0) << 12);
+    result.value5 = ((result.value5 & 0xF0000) >> 16) | ((result.value5 & 0xF) << 4) | ((result.value5 & 0xF00000) >> 12) | (result.value5 & 0xF000) | ((result.value5 & 0xFF0) << 12);
+    result.value6 = ((result.value6 & 0xF0000) >> 16) | ((result.value6 & 0xF) << 4) | ((result.value6 & 0xF00000) >> 12) | (result.value6 & 0xF000) | ((result.value6 & 0xFF0) << 12);
+    result.value7 = ((result.value7 & 0xF0000) >> 16) | ((result.value7 & 0xF) << 4) | ((result.value7 & 0xF00000) >> 12) | (result.value7 & 0xF000) | ((result.value7 & 0xFF0) << 12);
+    result.value8 = ((result.value8 & 0xF0000) >> 16) | ((result.value8 & 0xF) << 4) | ((result.value8 & 0xF00000) >> 12) | (result.value8 & 0xF000) | ((result.value8 & 0xFF0) << 12);
 #ifdef CHECK_PASS3BX8
     if (result.key1 != expected.key1 || result.key2 != expected.key2 || result.key3 != expected.key3 || result.key4 != expected.key4 || result.key5 != expected.key5 || result.key6 != expected.key6 || result.key7 != expected.key7 || result.key8 != expected.key8) {
         std::terminate();
     }
 #endif
     return result;
+}
+#else
+ValueX8 SeedKeyPass3bx8(uint32_t state, uint32_t keyLeastSignificant24Bit) {
+    return {SeedKeyPass3bx4(state, keyLeastSignificant24Bit), SeedKeyPass3bx4(state, keyLeastSignificant24Bit + 4)};
 }
 #endif
 
@@ -394,8 +436,8 @@ KeyX8 SeedKeyPass3bx8(uint32_t state, uint32_t keyLeastSignificant24Bit) {
 constexpr
 #endif
 #endif
-KeyX4 SeedKeyPass3bx4(uint32_t state, uint32_t keyLeastSignificant24Bit) {
-    KeyX4 result;
+ValueX4 SeedKeyPass3bx4(uint32_t state, uint32_t keyLeastSignificant24Bit) {
+    ValueX4 result;
 #ifdef CHECK_PASS3BX4
     KeyX4 expected;
     expected.key1 = SeedKeyPass3b(state, keyLeastSignificant24Bit);
@@ -482,20 +524,20 @@ KeyX4 SeedKeyPass3bx4(uint32_t state, uint32_t keyLeastSignificant24Bit) {
 #ifdef USE_SSE2
     uint32_t vals[4];
     _mm_store_si128(reinterpret_cast<__m128i*>(vals), statex4);
-    result.key1 = vals[0];
-    result.key2 = vals[1];
-    result.key3 = vals[2];
-    result.key4 = vals[3];
+    result.value1 = vals[0];
+    result.value2 = vals[1];
+    result.value3 = vals[2];
+    result.value4 = vals[3];
 #else
     result.key1 = statex2_1 & 0xFFFFFFFFull;
     result.key2 = statex2_2 & 0xFFFFFFFFull;
     result.key3 = statex2_1 >> 32;
     result.key4 = statex2_2 >> 32;
 #endif
-    result.key1 = ((result.key1 & 0xF0000) >> 16) | ((result.key1 & 0xF) << 4) | ((result.key1 & 0xF00000) >> 12) | (result.key1 & 0xF000) | ((result.key1 & 0xFF0) << 12);
-    result.key2 = ((result.key2 & 0xF0000) >> 16) | ((result.key2 & 0xF) << 4) | ((result.key2 & 0xF00000) >> 12) | (result.key2 & 0xF000) | ((result.key2 & 0xFF0) << 12);
-    result.key3 = ((result.key3 & 0xF0000) >> 16) | ((result.key3 & 0xF) << 4) | ((result.key3 & 0xF00000) >> 12) | (result.key3 & 0xF000) | ((result.key3 & 0xFF0) << 12);
-    result.key4 = ((result.key4 & 0xF0000) >> 16) | ((result.key4 & 0xF) << 4) | ((result.key4 & 0xF00000) >> 12) | (result.key4 & 0xF000) | ((result.key4 & 0xFF0) << 12);
+    result.value1 = ((result.value1 & 0xF0000) >> 16) | ((result.value1 & 0xF) << 4) | ((result.value1 & 0xF00000) >> 12) | (result.value1 & 0xF000) | ((result.value1 & 0xFF0) << 12);
+    result.value2 = ((result.value2 & 0xF0000) >> 16) | ((result.value2 & 0xF) << 4) | ((result.value2 & 0xF00000) >> 12) | (result.value2 & 0xF000) | ((result.value2 & 0xFF0) << 12);
+    result.value3 = ((result.value3 & 0xF0000) >> 16) | ((result.value3 & 0xF) << 4) | ((result.value3 & 0xF00000) >> 12) | (result.value3 & 0xF000) | ((result.value3 & 0xFF0) << 12);
+    result.value4 = ((result.value4 & 0xF0000) >> 16) | ((result.value4 & 0xF) << 4) | ((result.value4 & 0xF00000) >> 12) | (result.value4 & 0xF000) | ((result.value4 & 0xFF0) << 12);
 #ifdef CHECK_PASS3BX4
     if (result.key1 != expected.key1 || result.key2 != expected.key2 || result.key3 != expected.key3 || result.key4 != expected.key4) {
         std::terminate();

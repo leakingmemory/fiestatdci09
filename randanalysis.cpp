@@ -43,19 +43,9 @@ int main() {
                     auto pass2 = SeedKeyPass2(pass1, ((uint32_t) keyHighL) << 24);
                     for (int keyMiddle = 0; keyMiddle < 256; keyMiddle++) {
                         auto pass3a = SeedKeyPass3a(pass2, ((uint32_t) keyMiddle) << 16);
-#ifdef USE_AVX2
                         for (int keyLow = 0; keyLow < 65536; keyLow += 16) {
                             auto v = SeedKeyPass3bx16(pass3a, (uint32_t) keyLow);
-#else
-#ifdef USE_AVX
-                        for (int keyLow = 0; keyLow < 65536; keyLow += 8) {
-                            auto v = SeedKeyPass3bx8(pass3a, (uint32_t) keyLow);
-#else
-                        for (int keyLow = 0; keyLow < 65536; keyLow += 4) {
-                            auto v = SeedKeyPass3bx4(pass3a, (uint32_t) keyLow);
-#endif
-#endif
-                            if (v.key1 == sequence[i + 1]) {
+                            if (v.value1 == sequence[i + 1]) {
                                 uint16_t keyHigh = keyHighH;
                                 keyHigh = keyHigh << 8;
                                 keyHigh |= keyHighL;
@@ -67,7 +57,7 @@ int main() {
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.key2 == sequence[i + 1]) {
+                            if (v.value2 == sequence[i + 1]) {
                                 uint16_t keyHigh = keyHighH;
                                 keyHigh = keyHigh << 8;
                                 keyHigh |= keyHighL;
@@ -80,7 +70,7 @@ int main() {
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.key3 == sequence[i + 1]) {
+                            if (v.value3 == sequence[i + 1]) {
                                 uint16_t keyHigh = keyHighH;
                                 keyHigh = keyHigh << 8;
                                 keyHigh |= keyHighL;
@@ -93,7 +83,7 @@ int main() {
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.key4 == sequence[i + 1]) {
+                            if (v.value4 == sequence[i + 1]) {
                                 uint16_t keyHigh = keyHighH;
                                 keyHigh = keyHigh << 8;
                                 keyHigh |= keyHighL;
@@ -106,8 +96,7 @@ int main() {
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-#if defined(USE_AVX) || defined(USE_AVX2)
-                            if (v.key5 == sequence[i + 1]) {
+                            if (v.value5 == sequence[i + 1]) {
                                 uint16_t keyHigh = keyHighH;
                                 keyHigh = keyHigh << 8;
                                 keyHigh |= keyHighL;
@@ -120,7 +109,7 @@ int main() {
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.key6 == sequence[i + 1]) {
+                            if (v.value6 == sequence[i + 1]) {
                                 uint16_t keyHigh = keyHighH;
                                 keyHigh = keyHigh << 8;
                                 keyHigh |= keyHighL;
@@ -133,7 +122,7 @@ int main() {
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.key7 == sequence[i + 1]) {
+                            if (v.value7 == sequence[i + 1]) {
                                 uint16_t keyHigh = keyHighH;
                                 keyHigh = keyHigh << 8;
                                 keyHigh |= keyHighL;
@@ -146,7 +135,7 @@ int main() {
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.key8 == sequence[i + 1]) {
+                            if (v.value8 == sequence[i + 1]) {
                                 uint16_t keyHigh = keyHighH;
                                 keyHigh = keyHigh << 8;
                                 keyHigh |= keyHighL;
@@ -159,8 +148,7 @@ int main() {
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-#ifdef USE_AVX2
-                            if (v.key9 == sequence[i + 1]) {
+                            if (v.value9 == sequence[i + 1]) {
                                 uint16_t keyHigh = keyHighH;
                                 keyHigh = keyHigh << 8;
                                 keyHigh |= keyHighL;
@@ -173,7 +161,7 @@ int main() {
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.key10 == sequence[i + 1]) {
+                            if (v.value10 == sequence[i + 1]) {
                                 uint16_t keyHigh = keyHighH;
                                 keyHigh = keyHigh << 8;
                                 keyHigh |= keyHighL;
@@ -186,7 +174,7 @@ int main() {
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.key11 == sequence[i + 1]) {
+                            if (v.value11 == sequence[i + 1]) {
                                 uint16_t keyHigh = keyHighH;
                                 keyHigh = keyHigh << 8;
                                 keyHigh |= keyHighL;
@@ -199,7 +187,7 @@ int main() {
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.key12 == sequence[i + 1]) {
+                            if (v.value12 == sequence[i + 1]) {
                                 uint16_t keyHigh = keyHighH;
                                 keyHigh = keyHigh << 8;
                                 keyHigh |= keyHighL;
@@ -212,7 +200,7 @@ int main() {
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.key13 == sequence[i + 1]) {
+                            if (v.value13 == sequence[i + 1]) {
                                 uint16_t keyHigh = keyHighH;
                                 keyHigh = keyHigh << 8;
                                 keyHigh |= keyHighL;
@@ -225,7 +213,7 @@ int main() {
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.key14 == sequence[i + 1]) {
+                            if (v.value14 == sequence[i + 1]) {
                                 uint16_t keyHigh = keyHighH;
                                 keyHigh = keyHigh << 8;
                                 keyHigh |= keyHighL;
@@ -238,7 +226,7 @@ int main() {
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.key15 == sequence[i + 1]) {
+                            if (v.value15 == sequence[i + 1]) {
                                 uint16_t keyHigh = keyHighH;
                                 keyHigh = keyHigh << 8;
                                 keyHigh |= keyHighL;
@@ -251,7 +239,7 @@ int main() {
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-                            if (v.key16 == sequence[i + 1]) {
+                            if (v.value16 == sequence[i + 1]) {
                                 uint16_t keyHigh = keyHighH;
                                 keyHigh = keyHigh << 8;
                                 keyHigh |= keyHighL;
@@ -264,8 +252,6 @@ int main() {
                                 std::cout << "Iteration key: 0x" << std::hex << key << std::dec << std::endl;
                                 foundKeys.emplace_back(key);
                             }
-#endif
-#endif
                         }
                     }
                 });
