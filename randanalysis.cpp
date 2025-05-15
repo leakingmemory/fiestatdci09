@@ -193,6 +193,7 @@ int main() {
         keys = foundKeys;
     }
     for (int i = 1; i < (sequence.size() - 1); i++) {
+        std::cout << "Testing against " << i << "\n";
         auto iterator = keys.begin();
         while (iterator != keys.end()) {
             auto key = *iterator;
@@ -201,7 +202,7 @@ int main() {
                 std::cout << "Key works: 0x" << std::hex << key << std::dec << std::endl;
                 ++iterator;
             } else {
-                iterator = keys.erase(iterator);
+                ++iterator;
             }
         }
     }
