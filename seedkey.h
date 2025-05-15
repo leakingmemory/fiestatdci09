@@ -312,7 +312,7 @@ constexpr
 #endif
 ValueX4 SeedKeyPass3bx4(ValueX4 seed, uint32_t keyLeastSignificant24Bit);
 
-#ifdef USE_AVX2
+#ifdef USE_AVX512
 inline ValueX16 SeedKeyPass3bx16(uint32_t state, uint32_t keyLeastSignificant24Bit) {
     ValueX16 result;
 #ifdef CHECK_PASS3BX16
