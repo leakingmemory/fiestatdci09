@@ -13,7 +13,9 @@
 #include <ostream>
 
 //#define CHECK_PASS1X2
+//#define CHECK_PASS1X4
 //#define CHECK_PASS2X2
+//#define CHECK_PASS2X4
 //#define CHECK_PASS3AX2
 #define CHECK_PASS3BX16
 //#define CHECK_PASS3BX8
@@ -148,6 +150,79 @@ constexpr uint32_t SeedKeyPass2(uint32_t state, uint32_t keyLeastSignificantDW)
     }
     return state;
 }
+
+#ifdef USE_SSE2
+ValueX4 SeedKeyPass2(ValueX4 seed, uint32_t keyLeastSignificantDW) {
+#ifdef CHECK_PASS2X4
+    ValueX4 expected;
+    expected.value1 = SeedKeyPass2(seed.value1, keyLeastSignificantDW);
+    expected.value2 = SeedKeyPass2(seed.value2, keyLeastSignificantDW + 1);
+    expected.value3 = SeedKeyPass2(seed.value3, keyLeastSignificantDW + 2);
+    expected.value4 = SeedKeyPass2(seed.value4, keyLeastSignificantDW + 3);
+#endif
+    ValueX4 result;
+    __m128i key;
+    __m128i lowBits;
+    __m128i mask;
+    __m128i state;
+    {
+        uint32_t keyRaw[4] = {keyLeastSignificantDW, keyLeastSignificantDW + 1, keyLeastSignificantDW + 2, keyLeastSignificantDW + 3};
+        uint32_t lowBitsRaw[4] = {1, 1, 1, 1};
+        uint32_t maskRaw[4] = {0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7};
+        uint32_t stateRaw[4] = {seed.value1, seed.value2, seed.value3, seed.value4};
+        key = _mm_load_si128((const __m128i *) keyRaw);
+        key = _mm_srli_epi32(key, 24);
+        lowBits = _mm_load_si128((const __m128i *) lowBitsRaw);
+        mask = _mm_load_si128((const __m128i *) maskRaw);
+        state = _mm_load_si128((const __m128i *) stateRaw);
+    }
+    for (int i = 0; i < 8; i++) {
+        __m128i v3 = _mm_srli_epi32(state, 1);
+        __m128i v3_bit23 = _mm_and_si128(_mm_xor_si128(key, state), lowBits);
+        key = _mm_srli_epi32(key, 1);
+        {
+            __m128i bits = _mm_slli_epi32(v3_bit23, 23);
+            v3 = _mm_or_si128(v3, bits);
+        }
+        __m128i v3_bit20 = _mm_srli_epi32(v3, 20);
+        __m128i st_bit16 = _mm_srli_epi32(state, 16); // b15
+        __m128i st_bit13 = _mm_srli_epi32(state, 13); // b13
+        __m128i st_bit6 = _mm_srli_epi32(state, 6); // b5
+        __m128i st_bit4 = _mm_srli_epi32(state, 4); // b3
+        v3_bit20 = _mm_and_si128(_mm_xor_si128(v3_bit20, v3_bit23), lowBits);
+        st_bit16 = _mm_and_si128(_mm_xor_si128(st_bit16, v3_bit23), lowBits);
+        st_bit13 = _mm_and_si128(_mm_xor_si128(st_bit13, v3_bit23), lowBits);
+        st_bit6 = _mm_and_si128(_mm_xor_si128(st_bit6, v3_bit23), lowBits);
+        st_bit4 = _mm_and_si128(_mm_xor_si128(st_bit4, v3_bit23), lowBits);
+
+        v3_bit20 = _mm_slli_epi32(v3_bit20, 20);
+        st_bit16 = _mm_slli_epi32(st_bit16, 15);
+        st_bit13 = _mm_slli_epi32(st_bit13, 12);
+        st_bit6 = _mm_slli_epi32(st_bit6, 5);
+        st_bit4 = _mm_slli_epi32(st_bit4, 3);
+
+        state = _mm_and_si128(v3, mask);
+        state = _mm_or_si128(state, v3_bit20);
+        state = _mm_or_si128(state, st_bit16);
+        state = _mm_or_si128(state, st_bit13);
+        state = _mm_or_si128(state, st_bit6);
+        state = _mm_or_si128(state, st_bit4);
+    }
+    uint32_t vals[4];
+    _mm_store_si128(reinterpret_cast<__m128i*>(vals), state);
+    result.value1 = vals[0];
+    result.value2 = vals[1];
+    result.value3 = vals[2];
+    result.value4 = vals[3];
+#ifdef CHECK_PASS2X4
+    if (result.value1 != expected.value1 || result.value2 != expected.value2 || result.value3 != expected.value3 || result.value4 != expected.value4) {
+        std::terminate();
+    }
+#endif
+    return result;
+}
+#endif
+
 constexpr ValueX2 SeedKeyPass2(ValueX2 seed, uint32_t keyLeastSignificantDW)
 {
     uint64_t key = keyLeastSignificantDW + 1;
@@ -1080,6 +1155,20 @@ constexpr ValueX2 SeedKeyX2Pass1To2(ValueX2 seed, uint64_t key) {
     return SeedKeyPass2(state, keyLeastSignificant);
 }
 
+#ifdef USE_SSE2
+constexpr ValueX4 SeedKeyX4Pass1To2(ValueX4 seed, uint64_t key) {
+    uint32_t keyMostSignificant = (uint32_t) (key >> 32);
+    uint32_t keyLeastSignificant = (uint32_t) (key & 0xFFFFFFFF);
+#ifdef CHECK_PASS1X4
+    if (keyLeastSignificant >= 0xFFFFFFFD) {
+        std::terminate();
+    }
+#endif
+    ValueX4 state{SeedKeyPass1(seed.First(), keyMostSignificant), SeedKeyPass1(seed.Second(), keyMostSignificant)};
+    return SeedKeyPass2(state, keyLeastSignificant);
+}
+#endif
+
 constexpr ValueX2 SeedKeyX2Pass1To3a(ValueX2 seed, uint64_t key) {
     ValueX2 state = SeedKeyX2Pass1To2(seed, key);
     return SeedKeyPass3a(state, (uint32_t) (key & 0xFFFFFFFF));
@@ -1097,7 +1186,8 @@ constexpr
 #endif
 ValueX4 SeedKeyX4Pass1To3a(ValueX4 seed, uint64_t key) {
 #ifdef USE_SSE2
-    ValueX4 state{SeedKeyX2Pass1To2(seed.First(), key), SeedKeyX2Pass1To2(seed.Second(), key + 2)};
+    ValueX4 state{SeedKeyPass1(seed.First(), key >> 32), SeedKeyPass1(seed.Second(), key >> 32)};
+    state = SeedKeyPass2(state, key);
     return SeedKeyPass3a(state, (uint32_t) (key & 0xFFFFFFFF));
 #else
     return {SeedKeyX2Pass1To3a(seed.First(), key), SeedKeyX2Pass1To3a(seed.Second(), key + 2)};
@@ -1117,8 +1207,12 @@ constexpr
 #endif
 ValueX8 SeedKeyX8Pass1To3a(ValueX8 seed, uint64_t key) {
 #ifdef USE_AVX
+#ifdef USE_SSE2
+    ValueX8 state{SeedKeyX4Pass1To2(seed.First(), key), SeedKeyX4Pass1To2(seed.Second(), key + 4)};
+#else
     ValueX8 state{{SeedKeyX2Pass1To2(seed.First().First(), key), SeedKeyX2Pass1To2(seed.First().Second(), key + 2)},
                   {SeedKeyX2Pass1To2(seed.Second().First(), key + 4), SeedKeyX2Pass1To2(seed.Second().Second(), key + 6)}};
+#endif
     return SeedKeyPass3a(state, (uint32_t) (key & 0xFFFFFFFF));
 #else
     return {SeedKeyX4Pass1To3a(seed.First(), key), SeedKeyX4Pass1To3a(seed.Second(), key + 4)};
