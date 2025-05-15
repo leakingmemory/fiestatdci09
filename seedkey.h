@@ -14,8 +14,10 @@
 
 //#define CHECK_PASS1X2
 //#define CHECK_PASS1X4
+//#define CHECK_PASS1X8
 //#define CHECK_PASS2X2
 //#define CHECK_PASS2X4
+//#define CHECK_PASS2X8
 //#define CHECK_PASS3AX2
 #define CHECK_PASS3BX16
 //#define CHECK_PASS3BX8
@@ -67,6 +69,8 @@ struct ValueX16 {
     }
 };
 
+constexpr ValueX2 SeedKeyPass1(ValueX2 seed, uint32_t keyMostSignificantDW);
+
 /*
  * Based on https://github.com/andrewraharjo/CAN-Bus-Hack_Prius_Focus
  *
@@ -103,6 +107,181 @@ constexpr uint32_t SeedKeyPass1(uint32_t seed, uint32_t keyMostSignificantDW)
     }
     return state;
 }
+#ifdef USE_SSE2
+ValueX4 SeedKeyPass1(ValueX4 seed, uint32_t keyMostSignificantDW) {
+#ifdef CHECK_PASS1X4
+    ValueX4 expected;
+    expected.value1 = SeedKeyPass1(seed.value1, keyMostSignificantDW);
+    expected.value2 = SeedKeyPass1(seed.value2, keyMostSignificantDW);
+    expected.value3 = SeedKeyPass1(seed.value3, keyMostSignificantDW);
+    expected.value4 = SeedKeyPass1(seed.value4, keyMostSignificantDW);
+#endif
+    ValueX4 result;
+    __m128i v0;
+    __m128i lowBits;
+    __m128i mask;
+    __m128i state;
+    {
+        uint32_t v0_raw[4] = {
+            ((seed.value1 & 0xFF0000) >> 16) | (seed.value1 & 0xFF00) | (keyMostSignificantDW) | ((seed.value1 & 0xFF) << 16),
+            ((seed.value2 & 0xFF0000) >> 16) | (seed.value2 & 0xFF00) | (keyMostSignificantDW) | ((seed.value2 & 0xFF) << 16),
+            ((seed.value3 & 0xFF0000) >> 16) | (seed.value3 & 0xFF00) | (keyMostSignificantDW) | ((seed.value3 & 0xFF) << 16),
+            ((seed.value4 & 0xFF0000) >> 16) | (seed.value4 & 0xFF00) | (keyMostSignificantDW) | ((seed.value4 & 0xFF) << 16)
+        };
+        uint32_t lowBitsRaw[4] = {1, 1, 1, 1};
+        uint32_t maskRaw[4] = {0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7};
+        uint32_t stateRaw[4] = {0xc541a9, 0xc541a9, 0xc541a9, 0xc541a9};
+        v0 = _mm_load_si128((const __m128i *) v0_raw);
+        lowBits = _mm_load_si128((const __m128i *) lowBitsRaw);
+        mask = _mm_load_si128((const __m128i *) maskRaw);
+        state = _mm_load_si128((const __m128i *) stateRaw);
+    }
+    for (int i = 0; i < 32; i++) {
+        __m128i v2_bit23 = _mm_and_si128(_mm_xor_si128(v0, state), lowBits);
+        v0 = _mm_srli_epi32(v0, 1);
+        __m128i v2 = _mm_srli_epi32(state, 1);
+        {
+            __m128i bit = _mm_slli_epi32(v2_bit23, 23);
+            v2 = _mm_or_si128(v2, bit);
+        }
+        __m128i v2_bit20 = _mm_srli_epi32(v2, 20);
+        __m128i st_bit16 = _mm_srli_epi32(state, 16); // b15
+        __m128i st_bit13 = _mm_srli_epi32(state, 13); // b13
+        __m128i st_bit6 = _mm_srli_epi32(state, 6); // b5
+        __m128i st_bit4 = _mm_srli_epi32(state, 4); // b3
+        v2_bit20 = _mm_and_si128(_mm_xor_si128(v2_bit20, v2_bit23), lowBits);
+        st_bit16 = _mm_and_si128(_mm_xor_si128(st_bit16, v2_bit23), lowBits);
+        st_bit13 = _mm_and_si128(_mm_xor_si128(st_bit13, v2_bit23), lowBits);
+        st_bit6 = _mm_and_si128(_mm_xor_si128(st_bit6, v2_bit23), lowBits);
+        st_bit4 = _mm_and_si128(_mm_xor_si128(st_bit4, v2_bit23), lowBits);
+
+        v2_bit20 = _mm_slli_epi32(v2_bit20, 20);
+        st_bit16 = _mm_slli_epi32(st_bit16, 15);
+        st_bit13 = _mm_slli_epi32(st_bit13, 12);
+        st_bit6 = _mm_slli_epi32(st_bit6, 5);
+        st_bit4 = _mm_slli_epi32(st_bit4, 3);
+
+        state = _mm_and_si128(v2, mask);
+        state = _mm_or_si128(state, v2_bit20);
+        state = _mm_or_si128(state, st_bit16);
+        state = _mm_or_si128(state, st_bit13);
+        state = _mm_or_si128(state, st_bit6);
+        state = _mm_or_si128(state, st_bit4);
+    }
+    uint32_t vals[4];
+    _mm_store_si128(reinterpret_cast<__m128i*>(vals), state);
+    result.value1 = vals[0];
+    result.value2 = vals[1];
+    result.value3 = vals[2];
+    result.value4 = vals[3];
+#ifdef CHECK_PASS1X4
+    if (result.value1 != expected.value1 || result.value2 != expected.value2 || result.value3 != expected.value3 || result.value4 != expected.value4) {
+        std::terminate();
+    }
+#endif
+    return result;
+}
+#else
+constexpr ValueX4 SeedKeyPass1(ValueX4 seed, uint32_t keyMostSignificantDW) {
+    return {SeedKeyPass1(seed.First(), keyMostSignificantDW), SeedKeyPass1(seed.Second(), keyMostSignificantDW)};
+}
+#endif
+
+#ifdef USE_AVX
+ValueX8 SeedKeyPass1(ValueX8 seed, uint32_t keyMostSignificantDW) {
+#ifdef CHECK_PASS1X8
+    ValueX8 expected;
+    expected.value1 = SeedKeyPass1(seed.value1, keyMostSignificantDW);
+    expected.value2 = SeedKeyPass1(seed.value2, keyMostSignificantDW);
+    expected.value3 = SeedKeyPass1(seed.value3, keyMostSignificantDW);
+    expected.value4 = SeedKeyPass1(seed.value4, keyMostSignificantDW);
+    expected.value5 = SeedKeyPass1(seed.value5, keyMostSignificantDW);
+    expected.value6 = SeedKeyPass1(seed.value6, keyMostSignificantDW);
+    expected.value7 = SeedKeyPass1(seed.value7, keyMostSignificantDW);
+    expected.value8 = SeedKeyPass1(seed.value8, keyMostSignificantDW);
+#endif
+    ValueX8 result;
+    __m256i v0;
+    __m256i lowBits;
+    __m256i mask;
+    __m256i state;
+    {
+        uint32_t v0_raw[8] = {
+            ((seed.value1 & 0xFF0000) >> 16) | (seed.value1 & 0xFF00) | (keyMostSignificantDW) | ((seed.value1 & 0xFF) << 16),
+            ((seed.value2 & 0xFF0000) >> 16) | (seed.value2 & 0xFF00) | (keyMostSignificantDW) | ((seed.value2 & 0xFF) << 16),
+            ((seed.value3 & 0xFF0000) >> 16) | (seed.value3 & 0xFF00) | (keyMostSignificantDW) | ((seed.value3 & 0xFF) << 16),
+            ((seed.value4 & 0xFF0000) >> 16) | (seed.value4 & 0xFF00) | (keyMostSignificantDW) | ((seed.value4 & 0xFF) << 16),
+            ((seed.value5 & 0xFF0000) >> 16) | (seed.value5 & 0xFF00) | (keyMostSignificantDW) | ((seed.value5 & 0xFF) << 16),
+            ((seed.value6 & 0xFF0000) >> 16) | (seed.value6 & 0xFF00) | (keyMostSignificantDW) | ((seed.value6 & 0xFF) << 16),
+            ((seed.value7 & 0xFF0000) >> 16) | (seed.value7 & 0xFF00) | (keyMostSignificantDW) | ((seed.value7 & 0xFF) << 16),
+            ((seed.value8 & 0xFF0000) >> 16) | (seed.value8 & 0xFF00) | (keyMostSignificantDW) | ((seed.value8 & 0xFF) << 16)
+        };
+        uint32_t lowBitsRaw[8] = {1, 1, 1, 1, 1, 1, 1, 1};
+        uint32_t maskRaw[8] = {0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7};
+        uint32_t stateRaw[8] = {0xc541a9, 0xc541a9, 0xc541a9, 0xc541a9, 0xc541a9, 0xc541a9, 0xc541a9, 0xc541a9};
+        v0 = _mm256_load_si256((const __m256i *) v0_raw);
+        lowBits = _mm256_load_si256((const __m256i *) lowBitsRaw);
+        mask = _mm256_load_si256((const __m256i *) maskRaw);
+        state = _mm256_load_si256((const __m256i *) stateRaw);
+    }
+    for (int i = 0; i < 32; i++) {
+        __m256i v2_bit23 = _mm256_and_si256(_mm256_xor_si256(v0, state), lowBits);
+        v0 = _mm256_srli_epi32(v0, 1);
+        __m256i v2 = _mm256_srli_epi32(state, 1);
+        {
+            __m256i bit = _mm256_slli_epi32(v2_bit23, 23);
+            v2 = _mm256_or_si256(v2, bit);
+        }
+        __m256i v2_bit20 = _mm256_srli_epi32(v2, 20);
+        __m256i st_bit16 = _mm256_srli_epi32(state, 16); // b15
+        __m256i st_bit13 = _mm256_srli_epi32(state, 13); // b13
+        __m256i st_bit6 = _mm256_srli_epi32(state, 6); // b5
+        __m256i st_bit4 = _mm256_srli_epi32(state, 4); // b3
+        v2_bit20 = _mm256_and_si256(_mm256_xor_si256(v2_bit20, v2_bit23), lowBits);
+        st_bit16 = _mm256_and_si256(_mm256_xor_si256(st_bit16, v2_bit23), lowBits);
+        st_bit13 = _mm256_and_si256(_mm256_xor_si256(st_bit13, v2_bit23), lowBits);
+        st_bit6 = _mm256_and_si256(_mm256_xor_si256(st_bit6, v2_bit23), lowBits);
+        st_bit4 = _mm256_and_si256(_mm256_xor_si256(st_bit4, v2_bit23), lowBits);
+
+        v2_bit20 = _mm256_slli_epi32(v2_bit20, 20);
+        st_bit16 = _mm256_slli_epi32(st_bit16, 15);
+        st_bit13 = _mm256_slli_epi32(st_bit13, 12);
+        st_bit6 = _mm256_slli_epi32(st_bit6, 5);
+        st_bit4 = _mm256_slli_epi32(st_bit4, 3);
+
+        state = _mm256_and_si256(v2, mask);
+        state = _mm256_or_si256(state, v2_bit20);
+        state = _mm256_or_si256(state, st_bit16);
+        state = _mm256_or_si256(state, st_bit13);
+        state = _mm256_or_si256(state, st_bit6);
+        state = _mm256_or_si256(state, st_bit4);
+    }
+    uint32_t vals[8];
+    _mm256_store_si256(reinterpret_cast<__m256i*>(vals), state);
+    result.value1 = vals[0];
+    result.value2 = vals[1];
+    result.value3 = vals[2];
+    result.value4 = vals[3];
+    result.value5 = vals[4];
+    result.value6 = vals[5];
+    result.value7 = vals[6];
+    result.value8 = vals[7];
+#ifdef CHECK_PASS1X8
+    if (result.value1 != expected.value1 || result.value2 != expected.value2 || result.value3 != expected.value3 || result.value4 != expected.value4 || result.value5 != expected.value5 || result.value6 != expected.value6 || result.value7 != expected.value7 || result.value8 != expected.value8) {
+        std::terminate();
+    }
+#endif
+    return result;
+}
+#else
+#ifndef USE_SSE2
+constexpr
+#endif
+ValueX8 SeedKeyPass1(ValueX8 seed, uint32_t keyMostSignificantDW) {
+    return {SeedKeyPass1(seed.First(), keyMostSignificantDW), SeedKeyPass1(seed.Second(), keyMostSignificantDW)};
+}
+#endif
+
 constexpr ValueX2 SeedKeyPass1(ValueX2 seed, uint32_t keyMostSignificantDW)
 {
     uint64_t v0 = ((seed.value1 & 0xFF0000) >> 16) | (seed.value1 & 0xFF00) | (keyMostSignificantDW) | ((seed.value1 & 0xFF) << 16);
@@ -150,6 +329,86 @@ constexpr uint32_t SeedKeyPass2(uint32_t state, uint32_t keyLeastSignificantDW)
     }
     return state;
 }
+
+#ifdef USE_AVX
+ValueX8 SeedKeyPass2(ValueX8 seed, uint32_t keyLeastSignificantDW) {
+#ifdef CHECK_PASS2X8
+    ValueX8 expected;
+    expected.value1 = SeedKeyPass2(seed.value1, keyLeastSignificantDW);
+    expected.value2 = SeedKeyPass2(seed.value2, keyLeastSignificantDW + 1);
+    expected.value3 = SeedKeyPass2(seed.value3, keyLeastSignificantDW + 2);
+    expected.value4 = SeedKeyPass2(seed.value4, keyLeastSignificantDW + 3);
+    expected.value5 = SeedKeyPass2(seed.value5, keyLeastSignificantDW + 4);
+    expected.value6 = SeedKeyPass2(seed.value6, keyLeastSignificantDW + 5);
+    expected.value7 = SeedKeyPass2(seed.value7, keyLeastSignificantDW + 6);
+    expected.value8 = SeedKeyPass2(seed.value8, keyLeastSignificantDW + 7);
+#endif
+    ValueX8 result;
+    __m256i key;
+    __m256i lowBits;
+    __m256i mask;
+    __m256i state;
+    {
+        uint32_t keyRaw[8] = {keyLeastSignificantDW, keyLeastSignificantDW + 1, keyLeastSignificantDW + 2, keyLeastSignificantDW + 3, keyLeastSignificantDW + 4, keyLeastSignificantDW + 5, keyLeastSignificantDW + 6, keyLeastSignificantDW + 7};
+        uint32_t lowBitsRaw[8] = {1, 1, 1, 1, 1, 1, 1, 1};
+        uint32_t maskRaw[8] = {0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7, 0x00EF6FD7};
+        uint32_t stateRaw[8] = {seed.value1, seed.value2, seed.value3, seed.value4, seed.value5, seed.value6, seed.value7, seed.value8};
+        key = _mm256_load_si256((const __m256i *) keyRaw);
+        key = _mm256_srli_epi32(key, 24);
+        lowBits = _mm256_load_si256((const __m256i *) lowBitsRaw);
+        mask = _mm256_load_si256((const __m256i *) maskRaw);
+        state = _mm256_load_si256((const __m256i *) stateRaw);
+    }
+    for (int i = 0; i < 8; i++) {
+        __m256i v3 = _mm256_srli_epi32(state, 1);
+        __m256i v3_bit23 = _mm256_and_si256(_mm256_xor_si256(key, state), lowBits);
+        key = _mm256_srli_epi32(key, 1);
+        {
+            __m256i bits = _mm256_slli_epi32(v3_bit23, 23);
+            v3 = _mm256_or_si256(v3, bits);
+        }
+        __m256i v3_bit20 = _mm256_srli_epi32(v3, 20);
+        __m256i st_bit16 = _mm256_srli_epi32(state, 16); // b15
+        __m256i st_bit13 = _mm256_srli_epi32(state, 13); // b13
+        __m256i st_bit6 = _mm256_srli_epi32(state, 6); // b5
+        __m256i st_bit4 = _mm256_srli_epi32(state, 4); // b3
+        v3_bit20 = _mm256_and_si256(_mm256_xor_si256(v3_bit20, v3_bit23), lowBits);
+        st_bit16 = _mm256_and_si256(_mm256_xor_si256(st_bit16, v3_bit23), lowBits);
+        st_bit13 = _mm256_and_si256(_mm256_xor_si256(st_bit13, v3_bit23), lowBits);
+        st_bit6 = _mm256_and_si256(_mm256_xor_si256(st_bit6, v3_bit23), lowBits);
+        st_bit4 = _mm256_and_si256(_mm256_xor_si256(st_bit4, v3_bit23), lowBits);
+
+        v3_bit20 = _mm256_slli_epi32(v3_bit20, 20);
+        st_bit16 = _mm256_slli_epi32(st_bit16, 15);
+        st_bit13 = _mm256_slli_epi32(st_bit13, 12);
+        st_bit6 = _mm256_slli_epi32(st_bit6, 5);
+        st_bit4 = _mm256_slli_epi32(st_bit4, 3);
+
+        state = _mm256_and_si256(v3, mask);
+        state = _mm256_or_si256(state, v3_bit20);
+        state = _mm256_or_si256(state, st_bit16);
+        state = _mm256_or_si256(state, st_bit13);
+        state = _mm256_or_si256(state, st_bit6);
+        state = _mm256_or_si256(state, st_bit4);
+    }
+    uint32_t vals[8];
+    _mm256_store_si256(reinterpret_cast<__m256i*>(vals), state);
+    result.value1 = vals[0];
+    result.value2 = vals[1];
+    result.value3 = vals[2];
+    result.value4 = vals[3];
+    result.value5 = vals[4];
+    result.value6 = vals[5];
+    result.value7 = vals[6];
+    result.value8 = vals[7];
+#ifdef CHECK_PASS2X8
+    if (result.value1 != expected.value1 || result.value2 != expected.value2 || result.value3 != expected.value3 || result.value4 != expected.value4 || result.value5 != expected.value5 || result.value6 != expected.value6 || result.value7 != expected.value7 || result.value8 != expected.value8) {
+        std::terminate();
+    }
+#endif
+    return result;
+}
+#endif
 
 #ifdef USE_SSE2
 ValueX4 SeedKeyPass2(ValueX4 seed, uint32_t keyLeastSignificantDW) {
@@ -1207,12 +1466,8 @@ constexpr
 #endif
 ValueX8 SeedKeyX8Pass1To3a(ValueX8 seed, uint64_t key) {
 #ifdef USE_AVX
-#ifdef USE_SSE2
-    ValueX8 state{SeedKeyX4Pass1To2(seed.First(), key), SeedKeyX4Pass1To2(seed.Second(), key + 4)};
-#else
-    ValueX8 state{{SeedKeyX2Pass1To2(seed.First().First(), key), SeedKeyX2Pass1To2(seed.First().Second(), key + 2)},
-                  {SeedKeyX2Pass1To2(seed.Second().First(), key + 4), SeedKeyX2Pass1To2(seed.Second().Second(), key + 6)}};
-#endif
+    ValueX8 state = SeedKeyPass1(seed, (uint32_t) (key >> 32));
+    state = SeedKeyPass2(state, (uint32_t) (key & 0xFFFFFFFF));
     return SeedKeyPass3a(state, (uint32_t) (key & 0xFFFFFFFF));
 #else
     return {SeedKeyX4Pass1To3a(seed.First(), key), SeedKeyX4Pass1To3a(seed.Second(), key + 4)};
