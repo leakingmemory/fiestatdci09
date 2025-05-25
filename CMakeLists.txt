@@ -29,5 +29,18 @@ add_compile_options(-DNUM_THREADS=${NUM_THREADS})
 
 add_executable(fiestatdci09 main.cpp SerialInterface.cpp SerialInterface.h Fiesta.cpp Fiesta.h)
 add_executable(fiestatdci09-randanalysis randanalysis.cpp seedkey.h)
+add_executable(fiestatdci09-bletest bletest.cpp BleDevice.cpp)
+
+find_package(PkgConfig REQUIRED)
+
+pkg_check_modules(GLIB REQUIRED          glib-2.0>=2.50)
+pkg_check_modules(GIO  REQUIRED IMPORTED_TARGET gio-2.0)
+
+target_link_libraries(fiestatdci09-bletest PRIVATE PkgConfig::GIO)
+
+target_include_directories(fiestatdci09-bletest  PRIVATE
+        ${GLIB_INCLUDE_DIRS}
+        ${GLIB_LIBRARY_DIRS}
+)
 
 install(TARGETS fiestatdci09 fiestatdci09-randanalysis DESTINATION bin)
