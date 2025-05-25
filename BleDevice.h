@@ -9,6 +9,7 @@
 #include <memory>
 #include <functional>
 #include <variant>
+#include <optional>
 #include <gio/gio.h>
 
 class BleDeviceRxCallback;
@@ -55,6 +56,7 @@ private:
     void RxCallback(const std::string &);
 public:
     std::variant<std::string,std::shared_ptr<BleDeviceRxWaiter>> Read(const std::function<void (const std::string &)> &);
+    std::optional<std::string> ReadNonBlocking();
 };
 
 

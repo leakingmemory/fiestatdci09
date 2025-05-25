@@ -9,6 +9,8 @@
 #include <iostream>
 #include <algorithm>
 #include "seedkey.h"
+#include "ElmDevice.h"
+#include "BleDevice.h"
 
 class BusComException : public std::exception {
 private:
@@ -22,9 +24,25 @@ const char *BusComException::what() const noexcept {
     return err.c_str();
 }
 
-Fiesta::Fiesta() {
-    serialInterface = std::make_shared<SerialInterface>("/dev/ttyUSB0");
-    serialInterface->SetSpeed(SerialSpeed::S38400);
+static std::shared_ptr<ElmDevice> FiestaMakeDev(FiestaDevType devType, const std::string &deviceAddr) {
+    switch (devType) {
+        case FiestaDevType::TTY: {
+            auto ttyInterface = std::make_shared<SerialInterface>(deviceAddr);
+            ttyInterface->SetSpeed(SerialSpeed::S38400);
+            return std::make_shared<ElmDevice>(ttyInterface);
+        }
+        case FiestaDevType::BLE: {
+            auto btDev = std::make_shared<BleDevice>(deviceAddr);
+            return std::make_shared<ElmDevice>(btDev);
+        }
+        default:
+            return {};
+    }
+}
+
+Fiesta::Fiesta(FiestaDevType devType, const std::string &deviceAddr) : Fiesta(FiestaMakeDev(devType, deviceAddr)) {}
+
+Fiesta::Fiesta(const std::shared_ptr<ElmDevice> elmDevice) : serialInterface(elmDevice) {
     serialInterface->CommitAttributes();
     {
         auto retry = 10;
@@ -79,10 +97,19 @@ Fiesta::Fiesta() {
     // E-A426G
     // <- Unrelated notes
     std::cout << "Security request:\n";
-    uint64_t mixkey = 1309871;
+    uint64_t mixkey = 1313450;
     while (true) {
         serialInterface->Write("27 01\r"); // Extended session
-        if (WaitForLine(buf, ln, 2000)) {
+        int retry = 8;
+        while (--retry > 0) {
+            if (!WaitForLine(buf, ln, 500)) {
+                continue;
+            }
+            if (!ln.empty()) {
+                break;
+            }
+        }
+        {
             std::cout << ln << "\n";
             auto iterator = ln.begin();
             std::string addr{};
@@ -116,25 +143,79 @@ Fiesta::Fiesta() {
                 std::cout << "Responding: " << lnw << "\n";
                 lnw.append("\r");
                 serialInterface->Write(lnw);
-                if (WaitForLine(buf, ln, 2000)) {
-                    std::cout << ln << "\n";
-                    if (!ln.empty()) {
-                        std::cout << "Hit!: " << seed << " -> " << key << "\n";
+                bool weird{false};
+                bool wasWeird{false};
+                bool hit{false};
+                do {
+                    weird = false;
+                    while (WaitForLine(buf, ln, 5000)) {
+                        while (ln.starts_with(">")) {
+                            ln.erase(0, 1);
+                        }
+                        if (ln.empty() || ln == "NO DATA") {
+                            continue;
+                        }
+                        std::cout << ln << "\n";
                         break;
                     }
+                    if (!ln.empty()) {
+                        std::string addr = ln;
+                        {
+                            size_t i = 0;
+                            while (i < addr.size()) {
+                                if (addr[i] == ' ') {
+                                    addr.resize(i);
+                                    ln.erase(0, i + 1);
+                                    while (ln.starts_with(" ")) {
+                                        ln.erase(0, 1);
+                                    }
+                                    break;
+                                }
+                                ++i;
+                            }
+                        }
+                        std::cout << "From: " << addr << " msg: " << ln << "\n";
+                        if (ln.starts_with("05 67 01")) {
+                            std::cout << "Attempted throw-off, or adapter weirdness\n";
+                            weird = true;
+                        } else if (!ln.starts_with("03 7F 27 35")) {
+                            std::cout << "Hit!: " << seed << " -> " << key << "\n";
+                            hit = true;
+                            break;
+                        }
+                    }
+                    wasWeird |= weird;
+                } while (weird);
+                if (hit) {
+                    break;
                 }
-                ++mixkey;
+                if (!wasWeird) {
+                    ++mixkey;
+                }
+            } else {
+                std::cout << "Time lock?\n";
+                sleep(1);
+                while (WaitForLine(buf, ln, 1000)) {
+                    std::cout << "Flush: " << ln << "\n";
+                }
+                serialInterface->Write("09 04\r"); // Extended session
+                while (WaitForLine(buf, ln, 2000)) {
+                    std::cout << ln << "\n";
+                }
+                std::cout << "Upgrade session:\n";
+                serialInterface->Write("10 03\r"); // Extended session
+                while (WaitForLine(buf, ln, 2000)) {
+                    std::cout << ln << "\n";
+                }
             }
-        } else {
-            break;
         }
     }
 
-    std::cout << "Whatever:\n";
+    /*std::cout << "Whatever:\n";
     serialInterface->Write("22 00 01\r");
     while (WaitForLine(buf, ln, 60000)) {
         std::cout << ln << "\n";
-    }
+    }*/
 
 }
 

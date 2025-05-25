@@ -249,3 +249,16 @@ std::variant<std::string, std::shared_ptr<BleDeviceRxWaiter>> BleDevice::Read(co
     waitqueue.emplace_back(waiter);
     return waiter;
 }
+
+std::optional<std::string> BleDevice::ReadNonBlocking() {
+    std::lock_guard lock{mtx};
+    {
+        auto iterator = msgqueue.begin();
+        if (iterator != msgqueue.end()) {
+            std::string msg{*iterator};
+            iterator = msgqueue.erase(iterator);
+            return msg;
+        }
+    }
+    return {};
+}
