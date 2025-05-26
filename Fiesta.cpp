@@ -97,7 +97,7 @@ Fiesta::Fiesta(const std::shared_ptr<ElmDevice> elmDevice) : serialInterface(elm
     // E-A426G
     // <- Unrelated notes
     std::cout << "Security request:\n";
-    uint64_t mixkey = 1313450;
+    uint64_t mixkey = 1342440;
     while (true) {
         serialInterface->Write("27 01\r"); // Extended session
         int retry = 8;
@@ -193,18 +193,14 @@ Fiesta::Fiesta(const std::shared_ptr<ElmDevice> elmDevice) : serialInterface(elm
                     ++mixkey;
                 }
             } else {
-                std::cout << "Time lock?\n";
-                sleep(1);
-                while (WaitForLine(buf, ln, 1000)) {
+                --mixkey;
+                std::cout << "Lost session\n";
+                while (WaitForLine(buf, ln, 500)) {
                     std::cout << "Flush: " << ln << "\n";
-                }
-                serialInterface->Write("09 04\r"); // Extended session
-                while (WaitForLine(buf, ln, 2000)) {
-                    std::cout << ln << "\n";
                 }
                 std::cout << "Upgrade session:\n";
                 serialInterface->Write("10 03\r"); // Extended session
-                while (WaitForLine(buf, ln, 2000)) {
+                while (WaitForLine(buf, ln, 750)) {
                     std::cout << ln << "\n";
                 }
             }
