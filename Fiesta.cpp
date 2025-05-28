@@ -91,14 +91,47 @@ Fiesta::Fiesta(const std::shared_ptr<ElmDevice> elmDevice) : serialInterface(elm
     while (WaitForLine(buf, ln, 2000)) {
         std::cout << ln << "\n";
     }
+    std::cout << "Tester present:\n";
+    serialInterface->Write("3E 00\r"); // Extended session
+    while (WaitForLine(buf, ln, 2000)) {
+        std::cout << ln << "\n";
+    }
     // Unrelated notes ->
     // ABS:
     // 8V51-2C405-AE
     // E-A426G
     // <- Unrelated notes
     std::cout << "Security request:\n";
-    uint64_t mixkey = 1342440;
+    uint64_t mixkey = 1530300;
     while (true) {
+        if ((mixkey % 5) == 0) {
+            std::cout << "Tester present:\n";
+            serialInterface->Write("3E 00\r"); // Extended session
+            while (WaitForLine(buf, ln, 2000)) {
+                std::cout << ln << "\n";
+                if (!ln.empty()) {
+                    std::string addr{};
+                    auto iterator = ln.begin();
+                    if (iterator != ln.end() && *iterator == '>') {
+                        iterator = ln.erase(iterator);
+                    }
+                    while (iterator != ln.end() &&
+                           ((*iterator >= '0' && *iterator <= '9') || (*iterator >= 'A' && *iterator <= 'F') ||
+                            (*iterator >= 'a' && *iterator <= 'f'))) {
+                        addr.append(&(*iterator), 1);
+                        iterator = ln.erase(iterator);
+                    }
+                    while (iterator != ln.end() && (*iterator == ' ')) {
+                        iterator = ln.erase(iterator);
+                    }
+                    auto resp = DecodeHex(ln);
+                    if (resp.size() == 3 && resp[0] == 2 && resp[1] == 0x7E && resp[2] == 0) {
+                        std::cout << "Ok tester present\n";
+                        break;
+                    }
+                }
+            }
+        }
         serialInterface->Write("27 01\r"); // Extended session
         int retry = 8;
         while (--retry > 0) {
@@ -148,7 +181,7 @@ Fiesta::Fiesta(const std::shared_ptr<ElmDevice> elmDevice) : serialInterface(elm
                 bool hit{false};
                 do {
                     weird = false;
-                    while (WaitForLine(buf, ln, 5000)) {
+                    while (WaitForLine(buf, ln, 1000)) {
                         while (ln.starts_with(">")) {
                             ln.erase(0, 1);
                         }
@@ -195,12 +228,12 @@ Fiesta::Fiesta(const std::shared_ptr<ElmDevice> elmDevice) : serialInterface(elm
             } else {
                 --mixkey;
                 std::cout << "Lost session\n";
-                while (WaitForLine(buf, ln, 500)) {
+                while (WaitForLine(buf, ln, 300)) {
                     std::cout << "Flush: " << ln << "\n";
                 }
                 std::cout << "Upgrade session:\n";
                 serialInterface->Write("10 03\r"); // Extended session
-                while (WaitForLine(buf, ln, 750)) {
+                while (WaitForLine(buf, ln, 300)) {
                     std::cout << ln << "\n";
                 }
             }
