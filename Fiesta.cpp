@@ -103,11 +103,46 @@ Fiesta::Fiesta(const std::shared_ptr<ElmDevice> elmDevice) : serialInterface(elm
     // <- Unrelated notes
     std::cout << "Security request:\n";
     uint64_t mixkey = 1530300;
+    bool recovery{false};
     while (true) {
-        if ((mixkey % 5) == 0) {
+        if (recovery) {
+            std::cout << "Lost session\n";
+            while (WaitForLine(buf, ln, 300)) {
+                std::cout << "Flush: " << ln << "\n";
+            }
+            std::cout << "Upgrade session:\n";
+            serialInterface->Write("10 03\r"); // Extended session
+            while (WaitForLine(buf, ln, 300)) {
+                std::cout << ln << "\n";
+                if (!ln.empty()) {
+                    std::string addr{};
+                    auto iterator = ln.begin();
+                    if (iterator != ln.end() && *iterator == '>') {
+                        iterator = ln.erase(iterator);
+                    }
+                    while (iterator != ln.end() &&
+                           ((*iterator >= '0' && *iterator <= '9') || (*iterator >= 'A' && *iterator <= 'F') ||
+                            (*iterator >= 'a' && *iterator <= 'f'))) {
+                        addr.append(&(*iterator), 1);
+                        iterator = ln.erase(iterator);
+                    }
+                    while (iterator != ln.end() && (*iterator == ' ')) {
+                        iterator = ln.erase(iterator);
+                    }
+                    auto resp = DecodeHex(ln);
+                    if (resp.size() > 2 &&
+                        resp[0] > 1 && resp[1] == 0x50 && resp[2] == 3) {
+                        std::cout << "Upgrade ok\n";
+                        break;
+                    }
+                }
+            }
+            recovery = false;
+        }
+        if ((mixkey % 6) == 0) {
             std::cout << "Tester present:\n";
             serialInterface->Write("3E 00\r"); // Extended session
-            while (WaitForLine(buf, ln, 2000)) {
+            while (WaitForLine(buf, ln, 700)) {
                 std::cout << ln << "\n";
                 if (!ln.empty()) {
                     std::string addr{};
@@ -136,6 +171,7 @@ Fiesta::Fiesta(const std::shared_ptr<ElmDevice> elmDevice) : serialInterface(elm
         int retry = 8;
         while (--retry > 0) {
             if (!WaitForLine(buf, ln, 500)) {
+                recovery = true;
                 continue;
             }
             if (!ln.empty()) {
@@ -227,15 +263,7 @@ Fiesta::Fiesta(const std::shared_ptr<ElmDevice> elmDevice) : serialInterface(elm
                 }
             } else {
                 --mixkey;
-                std::cout << "Lost session\n";
-                while (WaitForLine(buf, ln, 300)) {
-                    std::cout << "Flush: " << ln << "\n";
-                }
-                std::cout << "Upgrade session:\n";
-                serialInterface->Write("10 03\r"); // Extended session
-                while (WaitForLine(buf, ln, 300)) {
-                    std::cout << ln << "\n";
-                }
+                recovery = true;
             }
         }
     }
