@@ -102,7 +102,7 @@ Fiesta::Fiesta(const std::shared_ptr<ElmDevice> elmDevice) : serialInterface(elm
     // E-A426G
     // <- Unrelated notes
     std::cout << "Security request:\n";
-    uint64_t mixkey = 1530300;
+    uint64_t mixkey = 1883400;
     bool recovery{false};
     while (true) {
         if (recovery) {
@@ -139,7 +139,7 @@ Fiesta::Fiesta(const std::shared_ptr<ElmDevice> elmDevice) : serialInterface(elm
             }
             recovery = false;
         }
-        if ((mixkey % 6) == 0) {
+        if ((mixkey % 7) == 0) {
             std::cout << "Tester present:\n";
             serialInterface->Write("3E 00\r"); // Extended session
             while (WaitForLine(buf, ln, 700)) {
@@ -252,6 +252,10 @@ Fiesta::Fiesta(const std::shared_ptr<ElmDevice> elmDevice) : serialInterface(elm
                             hit = true;
                             break;
                         }
+                    } else {
+                        std::cout << "No response to 27 02\n";
+                        wasWeird = true;
+                        break;
                     }
                     wasWeird |= weird;
                 } while (weird);
@@ -260,9 +264,11 @@ Fiesta::Fiesta(const std::shared_ptr<ElmDevice> elmDevice) : serialInterface(elm
                 }
                 if (!wasWeird) {
                     ++mixkey;
+                } else {
+                    recovery = true;
                 }
             } else {
-                --mixkey;
+                std::cout << "Wrong response to 27 01\n";
                 recovery = true;
             }
         }
